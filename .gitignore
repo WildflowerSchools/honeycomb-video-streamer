@@ -1,0 +1,11 @@
+
+honeycomb_tools/.env
+
+honeycomb_tools/__pycache__/
+
+honeycomb_video_streamer.egg-info/
+
+node_modules
+
+
+public/videos/
