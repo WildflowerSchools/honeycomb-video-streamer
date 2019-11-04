@@ -1,0 +1,15 @@
+{
+  "name": "honeycomb-video-streamer",
+  "version": "0.1.0",
+  "description": "Video streaming server that uses videos from honeycomb",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "http-attach": "^1.0.0",
+    "minimist": "^1.2.0"
+  }
+}
