@@ -57,8 +57,7 @@ def prepare_videos_for_environment_for_day(ctx, environment_name, output_path, o
     assignments = get_assginments(honeycomb_client, environment_name)
     # prepare list of datapoints for each assignment for the time period selected
     start = (datetime_of_day + timedelta(hours=13)).isoformat()
-    # end = (datetime_of_day + timedelta(hours=20)).isoformat()
-    end = (datetime_of_day + timedelta(hours=15)).isoformat()
+    end = (datetime_of_day + timedelta(hours=22)).isoformat()
     for assignment_id, assignment_name in assignments:
         datapoints = list(get_datapoint_keys_for_assignment_in_range(honeycomb_client, assignment_id, start, end))
         logging.info("%s has %i in %s=%s", assignment_name, len(datapoints), start, end)
