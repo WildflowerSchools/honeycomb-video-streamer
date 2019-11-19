@@ -10,7 +10,7 @@ import honeycomb
 
 from honeycomb_tools.introspection import get_assginments, get_datapoint_keys_for_assignment_in_range, process_assignment_datapoints_for_download
 from honeycomb_tools.loader import execute_manifest
-from honeycomb_tools.transcode import concat_videos
+from honeycomb_tools.transcode import concat_videos, prepare_hls
 
 
 load_dotenv()
@@ -51,24 +51,41 @@ def main(ctx):
 @click.option('--day', "-d", help='day of video to load expects format to be YYYY-MM-DD', required=True)
 def prepare_videos_for_environment_for_day(ctx, environment_name, output_path, output_name, day, manifest_path):
     datetime_of_day = parse_day(day)
+    # prepare list of datapoints for each assignment for the time period selected
+    start = (datetime_of_day + timedelta(hours=13)).isoformat()
+    end = (datetime_of_day + timedelta(hours=22)).isoformat()
+    prepare_videos_for_environment_for_time_range(ctx, environment_name, output_path, output_name, start, end, manifest_path)
+
+
+@main.command()
+@click.pass_context
+@click.option('--environment_name', "-e", help='name of the environment in honeycomb, required for using the honeycomb consumer', required=True)
+@click.option('--output_path', "-o", help='path to output prepared videos to', required=True)
+@click.option('--manifest_path', "-m", help='path to output manifest file to', required=True)
+@click.option('--output_name', "-n", help='name to give the output video', required=True)
+@click.option('--start', help='start time of video to load expects format to be YYYY-MM-DDTHH:MM', required=True)
+@click.option('--end', help='end time of video to load expects format to be YYYY-MM-DDTHH:MM', required=True)
+def prepare_videos_for_environment_for_time_range(ctx, environment_name, output_path, output_name, start, end, manifest_path):
     honeycomb_client = ctx.obj['honeycomb_client']
     # load the environment to get all the assignments
     # evaluate the assignments to filter out non-camera assignments
     assignments = get_assginments(honeycomb_client, environment_name)
-    # prepare list of datapoints for each assignment for the time period selected
-    start = (datetime_of_day + timedelta(hours=13)).isoformat()
-    end = (datetime_of_day + timedelta(hours=22)).isoformat()
     for assignment_id, assignment_name in assignments:
         datapoints = list(get_datapoint_keys_for_assignment_in_range(honeycomb_client, assignment_id, start, end))
         logging.info("%s has %i in %s=%s", assignment_name, len(datapoints), start, end)
         # fetch all of the videos for each camera
         download_manifest = process_assignment_datapoints_for_download(f"{output_path}/{output_name}/{assignment_name}/", datapoints)
+        # import json
+        # print(json.dumps(download_manifest, indent=4))
+        # continue
         # TODO - handle missing data
         execute_manifest(download_manifest)
         if len(download_manifest["files"]) > 0:
-            # concatenate the videos per camera, fill in missing video gaps with black frames
+            # concatenate the videos per camera, TODO - fill in missing video gaps with black frames
             files_path = os.path.join(output_path, output_name, assignment_name, "files.txt")
             video_out = os.path.join(output_path, output_name, assignment_name, "output.mp4")
+            hls_out = os.path.join(output_path, output_name, assignment_name, "output.m3u8")
+            hls_thumb_out = os.path.join(output_path, output_name, assignment_name, "output-small.m3u8")
             thumb_path = os.path.join(output_path, output_name, assignment_name, "output-small.mp4")
             with open(files_path, 'w') as fp:
                 for line in sorted(download_manifest["files"]):
@@ -78,12 +95,16 @@ def prepare_videos_for_environment_for_day(ctx, environment_name, output_path, o
                 fp.flush()
             concat_videos(files_path, video_out, thumb_path=thumb_path)
             # prepare videos for HLS streaming
+            prepare_hls(video_out, hls_out)
+            prepare_hls(thumb_path, hls_thumb_out)
     # write a manifest
+    # TODO - what is the manifest?
     # done
 
 
 def parse_day(day):
     return datetime.strptime(day, "%Y-%m-%d")
+
 
 if __name__ == '__main__':
     logger = logging.getLogger()

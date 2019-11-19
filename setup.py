@@ -10,7 +10,7 @@ BASE_DEPENDENCIES = [
     'click>=7.0',
     'python-dotenv>=0.10.3',
     'wildflower-honeycomb-sdk>=0.7.3',
-    'boto3>=1.11.0',
+    'boto3>=1.10.0',
     'ffmpeg-python==0.1.17',
 ]
 

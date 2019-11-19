@@ -1,145 +1,27 @@
-var http = require('http')
-var url = require('url')
-var path = require('path')
-var zlib = require('zlib')
-var httpAttach = require('http-attach')
-var fsProvider = require('./fsProvider')
-var debugPlayer = require('./debugPlayer')
+require('dotenv').config();
+const express = require('express');
+const auth = require('./auth');
+const videos = require('./videos');
+const applyAuth = auth.apply
+const applyVideos = videos.apply
 
-var CONTENT_TYPE = {
-  MANIFEST: 'application/vnd.apple.mpegurl',
-  SEGMENT: 'video/MP2T',
-  HTML: 'text/html'
+
+const port = process.env.SERVICE_PORT ? process.env.SERVICE_PORT : 8000
+
+var app;
+
+
+if (process.env.ENVIRONMENT === "production") {
+    app = express()
+} else {
+    app = require("https-localhost")()
 }
 
-function HLSServer (server, opts) {
-  var self = this
-  if (!(self instanceof HLSServer)) return new HLSServer(server, opts)
+console.log('setting up')
 
-  if (server) self.attach(server, opts)
-}
+applyAuth(app)
+applyVideos(app)
 
-HLSServer.prototype.attach = function (server, opts) {
-  var self = this
+console.log('listening')
 
-  opts = opts || {}
-  self.path = opts.path || self.path || '/'
-  self.dir = opts.dir || self.dir || ''
-  self.debugPlayer = opts.debugPlayer == null ? true : opts.debugPlayer
-
-  self.provider = opts.provider || fsProvider
-
-  if (isNaN(server)) {
-    httpAttach(server, self._middleware.bind(self))
-  } else {  // Port numbers
-    var port = server
-    server = http.createServer()
-    httpAttach(server, self._middleware.bind(self))
-    console.log("starting hls server")
-    server.listen(port)
-  }
-}
-
-HLSServer.prototype._middleware = function (req, res, next) {
-  var self = this
-
-  var uri = url.parse(req.url).pathname
-  var relativePath = path.relative(self.path, uri)
-  var filePath = path.join(self.dir, relativePath)
-  var extension = path.extname(filePath)
-
-  req.filePath = filePath
-
-  // Gzip support
-  var ae = req.headers['accept-encoding'] || ''
-  req.acceptsCompression = ae.match(/\bgzip\b/)
-
-  if (uri === '/player.html' && self.debugPlayer) {
-    self._writeDebugPlayer(res, next)
-    return
-  }
-
-  self.provider.exists(req, function (err, exists) {
-    if (err) {
-      res.statusCode = 500
-      res.end()
-    } else if (!exists) {
-      res.statusCode = 404
-      res.end()
-    } else {
-      res.setHeader('Access-Control-Allow-Origin', '*')
-      res.setHeader('Access-Control-Allow-Headers', '*')
-      res.setHeader('Access-Control-Allow-Method', 'GET')
-      switch (extension) {
-        case '.m3u8':
-          self._writeManifest(req, res, next)
-          break
-        case '.ts':
-          self._writeSegment(req, res, next)
-          break
-        default:
-          next()
-          break
-      }
-    }
-  })
-}
-
-HLSServer.prototype._writeDebugPlayer = function (res, next) {
-  res.setHeader('Content-Type', CONTENT_TYPE.HTML)
-  res.statusCode = 200
-  // TODO: Use HLS.js
-  res.write(debugPlayer.html)
-  res.end()
-  next()
-}
-
-HLSServer.prototype._writeManifest = function (req, res, next) {
-  var self = this
-
-  console.log(`serving manifest ${req.filePath}`)
-  self.provider.getManifestStream(req, function (err, stream) {
-    if (err) {
-      res.statusCode = 500
-      res.end()
-      return next()
-    }
-
-    res.setHeader('Content-Type', CONTENT_TYPE.MANIFEST)
-    res.statusCode = 200
-
-    if (req.acceptsCompression) {
-      res.setHeader('content-encoding', 'gzip')
-      res.statusCode = 200
-      var gzip = zlib.createGzip()
-      stream.pipe(gzip).pipe(res)
-    } else {
-      stream.pipe(res, 'utf-8')
-    }
-  })
-}
-
-HLSServer.prototype._writeSegment = function (req, res, next) {
-  var self = this
-
-  console.log(`serving segment ${req.filePath}`)
-  self.provider.getSegmentStream(req, function (err, stream) {
-    if (err) {
-      res.statusCode = 500
-      res.end()
-      return
-    }
-    res.setHeader('Content-Type', CONTENT_TYPE.SEGMENT)
-    res.statusCode = 200
-    stream.pipe(res)
-  })
-}
-
-
- 
-var server = http.createServer()
-var hls = new HLSServer(server, {
-  path: '/streams',     // Base URI to output HLS streams
-  dir: 'public/videos'  // Directory that input files are stored
-})
-server.listen(8000)
+app.listen(port, () => console.log(`Example app listening on port ${port}!`))
