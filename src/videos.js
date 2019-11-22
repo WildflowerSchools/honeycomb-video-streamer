@@ -1,4 +1,5 @@
 const express = require('express');
+const cors = require('cors');
 const secured = require("./auth").secured;
 
 
@@ -7,13 +8,9 @@ const CONTENT_TYPE = {
     SEGMENT: 'video/MP2T',
 }
 
-const port = process.env.SERVICE_PORT ? process.env.SERVICE_PORT : 8000
-
-
 function contentHeaders(res, path, stat) {
-    var ext = path.split('.').slice(-1)[0]
-    if(ext == "m3u8" || ext == "ts") {
-        res.setHeader('Access-Control-Allow-Origin', '*')
+    const ext = path.split('.').slice(-1)[0]
+    if (ext === "m3u8" || ext === "ts") {
         res.setHeader('Access-Control-Allow-Headers', '*')
         res.setHeader('Access-Control-Allow-Method', 'GET')
         switch (ext) {
@@ -37,7 +34,22 @@ const options = {
   setHeaders: contentHeaders,
 }
 
+const corsOptions = Object.assign({
+    credentials: true,
+    origin: '*'
+  }, process.env.ENVIRONMENT !== "production" &&
+    {
+      // On development, allow origin from any localhost:{port}
+      origin: function (origin, callback) {
+        if (!origin || ['localhost', '127.0.0.1'].indexOf(new URL(origin).hostname) !== -1) {
+          callback(null, true)
+        } else {
+          callback(new Error('Not allowed by CORS'))
+        }
+      }
+    }
+)
 
 exports.apply = function(app) {
-    app.use('/videos', secured, express.static('public/videos', options));
+    app.use('/videos', cors(corsOptions), secured, express.static('public/videos', options));
 }

@@ -8,8 +8,7 @@ const applyVideos = videos.apply
 
 const port = process.env.SERVICE_PORT ? process.env.SERVICE_PORT : 8000
 
-var app;
-
+let app
 
 if (process.env.ENVIRONMENT === "production") {
     app = express()

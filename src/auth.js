@@ -10,7 +10,9 @@ const querystring = require("querystring");
 
 const session = {
   secret: "CCgp89X4gQmXtdqav9BxGxNP3DuA",
-  cookie: {secure: true},
+  cookie: Object.assign(
+    {secure: true, sameSite: 'strict'},
+    process.env.ENVIRONMENT !== "production" && {domain: 'localhost', sameSite: 'none'}),
   resave: false,
   saveUninitialized: false
 };
