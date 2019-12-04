@@ -1,13 +1,14 @@
 const express = require("express")
 const cors = require("cors")
-const securedJWT = require("./auth").securedJWT
+const path = require("path")
+const securedSessionOrJWT = require("./auth").securedSessionOrJWT
 
 const CONTENT_TYPE = {
   MANIFEST: "application/vnd.apple.mpegurl",
   SEGMENT: "video/MP2T"
 }
 
-function contentHeaders(res, path, stat) {
+function hlsContentHeaders(res, path, stat) {
   const ext = path.split(".").slice(-1)[0]
   if (ext === "m3u8" || ext === "ts") {
     res.setHeader("Access-Control-Allow-Headers", "*")
@@ -23,14 +24,47 @@ function contentHeaders(res, path, stat) {
   }
 }
 
-const options = {
+const hlsStaticOptions = {
   dotfiles: "ignore",
   etag: false,
   extensions: ["ts", "m3u8"],
   index: false,
   maxAge: "1d",
   redirect: false,
-  setHeaders: contentHeaders
+  setHeaders: hlsContentHeaders
+}
+
+function jsonContentHeaders(req, res, next) {
+  res.setHeader("Access-Control-Allow-Headers", "*")
+  res.setHeader("Access-Control-Allow-Method", "GET")
+  res.setHeader("Content-Type", "application/JSON")
+  next()
+}
+
+function handleVideoIndex(req, res) {
+  const { classroom, date } = req.query
+
+  const qDate = new Date(date)
+
+  if (classroom === undefined) {
+    return res.json({ error: "classroom query param required" })
+  } else if (date === undefined) {
+    return res.json({ error: "date query param required" })
+  } else if (isNaN(qDate.getTime())) {
+    return res.json({ error: "date invalid" })
+  }
+
+  if (
+    classroom === "capucine" &&
+    qDate.getTime() === new Date("2019-11-06").getTime()
+  ) {
+    // TODO: Build JSON video index response dynamically
+    res.sendFile("videos/capucine-001/index.json", {
+      root: path.resolve(__dirname, "../public")
+    })
+  } else {
+    res.json({})
+  }
 }
 
 const corsOptions = Object.assign(
@@ -54,10 +88,23 @@ const corsOptions = Object.assign(
 )
 
 exports.apply = function(app) {
+  const sessionOrJWTAuthMiddleware = [cors(corsOptions), securedSessionOrJWT]
+
+  // Index fetch endpoint
+  app.get(
+    "/videos",
+    ...[
+      ...sessionOrJWTAuthMiddleware,
+      ...[jsonContentHeaders, handleVideoIndex]
+    ]
+  )
+
+  // Static file server, serve HLS video assets
   app.use(
     "/videos",
-    securedJWT,
-    cors(corsOptions),
-    express.static("public/videos", options)
+    ...[
+      ...sessionOrJWTAuthMiddleware,
+      express.static("public/videos", hlsStaticOptions)
+    ]
   )
 }

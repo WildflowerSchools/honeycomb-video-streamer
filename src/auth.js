@@ -3,9 +3,10 @@ const router = express.Router()
 const expressSession = require("express-session")
 const passport = require("passport")
 const Auth0Strategy = require("passport-auth0")
+const JwtStrategy = require("passport-jwt").Strategy
+const ExtractJwt = require("passport-jwt").ExtractJwt
 const util = require("util")
 const querystring = require("querystring")
-const jwt = require("express-jwt")
 const jwksRsa = require("jwks-rsa")
 
 const session = {
@@ -50,6 +51,30 @@ const sessionStrategy = new Auth0Strategy(
      * profile has all the information from the user
      */
     return done(null, profile)
+  }
+)
+
+const jwtStrategy = new JwtStrategy(
+  {
+    // Dynamically provide a signing key based on the kid in the header and the singing keys provided by the JWKS endpoint.
+    secretOrKeyProvider: jwksRsa.passportJwtSecret({
+      cache: true,
+      rateLimit: true,
+      jwksRequestsPerMinute: 5,
+      jwksUri: `https://${authConfig.domain}/.well-known/jwks.json`
+    }),
+    jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+    // Validate the audience and the issuer.
+    audience: authConfig.audience,
+    issuer: `https://${authConfig.domain}/`,
+    algorithm: ["RS256"]
+  },
+  (jwt_payload, next) => {
+    if (jwt_payload && jwt_payload.sub) {
+      return next(null, jwt_payload)
+    }
+
+    return next(null, false)
   }
 )
 
@@ -110,6 +135,7 @@ router.get("/logout", (req, res) => {
 exports.apply = function(app) {
   app.use(expressSession(session))
   passport.use(sessionStrategy)
+  passport.use(jwtStrategy)
   app.use(passport.initialize())
   app.use(passport.session())
   app.use("/", router)
@@ -131,17 +157,20 @@ exports.securedSession = (req, res, next) => {
   res.redirect("/login")
 }
 
-// Define middleware that validates incoming bearer tokens
-// using JWKS from wildflowerschools.auth0.com
-exports.securedJWT = jwt({
-  secret: jwksRsa.expressJwtSecret({
-    cache: true,
-    rateLimit: true,
-    jwksRequestsPerMinute: 5,
-    jwksUri: `https://${authConfig.domain}/.well-known/jwks.json`
-  }),
+exports.securedSessionOrJWT = (req, res, next) => {
+  if (req.user) {
+    return next()
+  }
 
-  audience: authConfig.audience,
-  issuer: `https://${authConfig.domain}/`,
-  algorithm: ["RS256"]
-})
+  passport.authenticate("jwt", { session: false }, (err, user) => {
+    if (err) {
+      return next(err)
+    }
+
+    if (user) {
+      return next(null, user)
+    } else {
+      return res.status(401).json({ error: "could not authenticate" })
+    }
+  })(req, res, next)
+}
