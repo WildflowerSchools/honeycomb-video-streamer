@@ -2,9 +2,12 @@ import os
 import os.path
 
 
-def get_assginments(honeycomb_client, environment_name):
+def get_environment_id(honeycomb_client, environment_name):
     environments = honeycomb_client.query.findEnvironment(name=environment_name)
-    environment_id = environments.data[0].get('environment_id')
+    return environments.data[0].get('environment_id')
+
+
+def get_assignments(honeycomb_client, environment_id):
     assignments = honeycomb_client.query.query(
         """
         query getEnvironment ($environment_id: ID!) {
@@ -34,10 +37,10 @@ def get_assginments(honeycomb_client, environment_name):
 
 def get_datapoint_keys_for_assignment_in_range(honeycomb_client, assignment_id, start, end):
     query_pages = """
-        query findDatapoints($cursor: String, $assignment_id: String, $start: String, $end: String) {
-          findDatapoints(
+        query searchDatapoints($cursor: String, $assignment_id: String, $start: String, $end: String) {
+          searchDatapoints(
             query: { operator: AND, children: [
-                { operator: EQ, field: "source.source", value: $assignment_id },
+                { operator: EQ, field: "source", value: $assignment_id },
                 { operator: GT, field: "timestamp", value: $start },
                 { operator: LT, field: "timestamp", value: $end },
             ] }
@@ -65,8 +68,8 @@ def get_datapoint_keys_for_assignment_in_range(honeycomb_client, assignment_id, 
     cursor = ""
     while True:
         page = honeycomb_client.raw_query(query_pages, {"assignment_id": assignment_id, "start": start, "end": end, "cursor": cursor})
-        page_info = page.get("findDatapoints").get("page_info")
-        data = page.get("findDatapoints").get("data")
+        page_info = page.get("searchDatapoints").get("page_info")
+        data = page.get("searchDatapoints").get("data")
         cursor = page_info.get("cursor")
         if page_info.get("count") == 0:
             break

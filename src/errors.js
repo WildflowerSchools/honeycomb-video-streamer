@@ -20,6 +20,12 @@ function errorHandler(err, req, res, next) {
 }
 
 exports.apply = function(app) {
+  app.get(
+    "/",
+    (req, res, next) => {
+      res.status(200).json({ error: "nothing to see here" })
+    }
+  )
   app.use(logErrors)
   app.use(clientErrorHandler)
   app.use(errorHandler)

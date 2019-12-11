@@ -3,6 +3,9 @@ const cors = require("cors")
 const path = require("path")
 const securedSessionOrJWT = require("./auth").securedSessionOrJWT
 
+
+const PUBLIC_PATH = path.resolve(__dirname, process.env.ENVIRONMENT === "production" ? "public" : "../public")
+
 const CONTENT_TYPE = {
   MANIFEST: "application/vnd.apple.mpegurl",
   SEGMENT: "video/MP2T"
@@ -47,23 +50,27 @@ function handleVideoIndex(req, res) {
   const qDate = new Date(date)
 
   if (classroom === undefined) {
-    return res.json({ error: "classroom query param required" })
+    res.sendFile("videos/index.json", {
+      root: PUBLIC_PATH
+    })
   } else if (date === undefined) {
-    return res.json({ error: "date query param required" })
+    res.sendFile(`videos/${classroom}/index.json`, {
+      root: PUBLIC_PATH
+    })
   } else if (isNaN(qDate.getTime())) {
     return res.json({ error: "date invalid" })
-  }
-
-  if (
-    classroom === "capucine" &&
-    qDate.getTime() === new Date("2019-11-06").getTime()
-  ) {
-    // TODO: Build JSON video index response dynamically
-    res.sendFile("videos/capucine-001/index.json", {
-      root: path.resolve(__dirname, "../public")
-    })
   } else {
-    res.json({})
+    if (
+      classroom === "capucine" &&
+      qDate.getTime() === new Date("2019-11-06").getTime()
+    ) {
+      // TODO: Build JSON video index response dynamically
+      res.sendFile("videos/capucine-001/index.json", {
+        root: PUBLIC_PATH
+      })
+    } else {
+      res.json({})
+    }
   }
 }
 

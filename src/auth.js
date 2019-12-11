@@ -10,7 +10,7 @@ const querystring = require("querystring")
 const jwksRsa = require("jwks-rsa")
 
 const session = {
-  secret: "CCgp89X4gQmXtdqav9BxGxNP3DuA",
+  secret: process.env.SESSION_SECRET ? process.env.SESSION_SECRET : "CCgp89X4gQmXtdqav9BxGxNP3DuA",
   cookie: Object.assign(
     { secure: true, sameSite: "strict" },
     process.env.ENVIRONMENT !== "production" && {
@@ -29,9 +29,7 @@ const authConfig = {
   audience: process.env.AUTH0_AUDIENCE,
   clientID: process.env.AUTH0_CLIENT_ID,
   clientSecret: process.env.AUTH0_CLIENT_SECRET,
-  callbackURL: process.env.AUTH0_CALLBACK_URL
-    ? process.env.AUTH0_CALLBACK_URL
-    : `https://localhost:${port}/callback`
+  callbackURL: `https://${process.env.HOSTNAME ? process.env.HOSTNAME : "https://localhost:" + port}/callback`,
 }
 
 const sessionStrategy = new Auth0Strategy(

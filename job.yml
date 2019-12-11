@@ -1,0 +1,38 @@
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: honeycomb-video-streamer-prepare-2019-12-10
+  namespace: honeycomb
+spec:
+  template:
+    metadata:
+      annotations:
+        iam.amazonaws.com/role: honeycomb-role
+    spec:
+      containers:
+      - name: migrate
+        image: wildflowerschools/honeycomb-video-streamer:prepare-v7
+        envFrom:
+          - secretRef:
+              name: honeycomb-client-settings
+        env:
+        - name: ENVIRONMENT_NAME
+          value: capucine
+        - name: OUTPUT_NAME
+          value: 2019-12-10
+        - name: START_TIME
+          value: 2019-12-10T13:00
+        - name: END_TIME
+          value: 2019-12-10T22:00
+        volumeMounts:
+          - name: efs-pvc
+            mountPath: "/data"
+      restartPolicy: OnFailure
+      volumes:
+        - name: efs-pvc
+          persistentVolumeClaim:
+            claimName: efs
+  backoffLimit: 4
+
