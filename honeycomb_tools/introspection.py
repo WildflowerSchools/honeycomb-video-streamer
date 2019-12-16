@@ -41,7 +41,7 @@ def get_datapoint_keys_for_assignment_in_range(honeycomb_client, assignment_id, 
           searchDatapoints(
             query: { operator: AND, children: [
                 { operator: EQ, field: "source", value: $assignment_id },
-                { operator: GT, field: "timestamp", value: $start },
+                { operator: GTE, field: "timestamp", value: $start },
                 { operator: LT, field: "timestamp", value: $end },
             ] }
             page: { cursor: $cursor, max: 1000, sort: {field: "timestamp", direction: DESC} }
