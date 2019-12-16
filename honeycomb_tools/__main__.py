@@ -107,7 +107,7 @@ def prepare_videos_for_environment_for_time_range(ctx, environment_name, output_
                         {
                           "device_id": assignment_id,
                           "device_name": assignment_name,
-                          "url": f"/videos/{environment_id}/{assignment_id}/output.m3u8"
+                          "url": f"/videos/{environment_id}/{output_name}/{assignment_name}/output.m3u8"
                         } for assignment_id, assignment_name in assignments]
                     }, fp)
         fp.flush()

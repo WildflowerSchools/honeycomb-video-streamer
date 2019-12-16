@@ -13,6 +13,7 @@ def read_classrooms(root_path):
         doc = json.load(fp)
         return doc.get("classrooms")
 
+
 def add_classroom(root_path, name, id):
     classrooms = read_classrooms(root_path)
     ids = {classroom.get("id") for classroom in classrooms}
@@ -25,6 +26,7 @@ def add_classroom(root_path, name, id):
         json.dump({"classrooms": classrooms}, fp)
         fp.flush()
         print(f"classroom {id} added")
+
 
 def read_classroom_index(root_path, classroom_id):
     index_location = os.path.join(root_path, classroom_id, "index.json")
@@ -46,7 +48,7 @@ def add_date_to_classroom(root_path, classroom_id, date, name, time_range):
         return
     classroom.append({
                         "name": name,
-                        "url": f"/videos/{classroom_id}/{date}/index.js",
+                        "url": f"/videos/{classroom_id}/{date}/index.json",
                         "date": date,
                         "ranges": [
                             time_range
