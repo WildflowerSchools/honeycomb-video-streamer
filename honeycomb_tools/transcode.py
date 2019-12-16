@@ -19,4 +19,4 @@ def concat_videos(input_path, output_path, thumb_path=None):
 
 def prepare_hls(input_path, output_path, hls_time=10):
     # ffmpeg -i ./public/videos/test/cc-1/output-small.mp4 -profile:v baseline -level 3.0 -s 640x360 -start_number 0 -hls_time 10 -hls_list_size 0 -f hls public/videos/output.m3u8
-    ffmpeg.input(input_path).output(output_path, format="hls", c="copy").run()
+    ffmpeg.input(input_path).output(output_path, format="hls", hls_list_size=0, c="copy").run()
