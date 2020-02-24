@@ -1,3 +1,7 @@
 node_modules/*
 public/*
-
+data/*
+prep/*
+honeycomb_video_streamer.egg-info/*
+.env
+.git/*

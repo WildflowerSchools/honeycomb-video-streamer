@@ -9,3 +9,6 @@ node_modules
 
 
 public/videos/
+data/
+
+prep/

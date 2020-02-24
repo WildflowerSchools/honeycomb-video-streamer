@@ -10,7 +10,7 @@ import honeycomb
 
 from honeycomb_tools.introspection import get_assignments, get_datapoint_keys_for_assignment_in_range, process_assignment_datapoints_for_download, get_environment_id
 from honeycomb_tools.loader import execute_manifest
-from honeycomb_tools.transcode import concat_videos, prepare_hls
+from honeycomb_tools.transcode import concat_videos, prepare_hls, trim_video
 from honeycomb_tools.manifestations import add_classroom, add_date_to_classroom
 
 
@@ -64,6 +64,32 @@ def prepare_videos_for_environment_for_day(ctx, environment_name, output_path, o
 @click.option('--output_name', "-n", help='name to give the output video', required=True)
 @click.option('--start', help='start time of video to load expects format to be YYYY-MM-DDTHH:MM', required=True)
 @click.option('--end', help='end time of video to load expects format to be YYYY-MM-DDTHH:MM', required=True)
+def list_datapoints_for_environment_for_time_range(ctx, environment_name, output_path, output_name, start, end):
+    honeycomb_client = ctx.obj['honeycomb_client']
+    # load the environment to get all the assignments
+    environment_id = get_environment_id(honeycomb_client, environment_name)
+    with open(f"{output_path}/{output_name}", 'w') as output_fp:
+        output_fp.write(f"assignment_id,timestamp,data_id,key\n")
+        # evaluate the assignments to filter out non-camera assignments
+        assignments = get_assignments(honeycomb_client, environment_id)
+        for assignment_id, assignment_name in assignments:
+            datapoints = list(get_datapoint_keys_for_assignment_in_range(honeycomb_client, assignment_id, start, end))
+            for item in datapoints:
+                output_fp.write(f"{assignment_id},{item['timestamp']},{item['data_id']},{item['file']['key']}\n")
+        output_fp.flush()
+
+
+def vts(index):
+    return f"{(int(int(index/6)/60)):02}:{int(index/6) % 60:02}:{(index % 6) * 10:02}.000"
+
+
+@main.command()
+@click.pass_context
+@click.option('--environment_name', "-e", help='name of the environment in honeycomb, required for using the honeycomb consumer', required=True)
+@click.option('--output_path', "-o", help='path to output prepared videos to', required=True)
+@click.option('--output_name', "-n", help='name to give the output video', required=True)
+@click.option('--start', help='start time of video to load expects format to be YYYY-MM-DDTHH:MM', required=True)
+@click.option('--end', help='end time of video to load expects format to be YYYY-MM-DDTHH:MM', required=True)
 def prepare_videos_for_environment_for_time_range(ctx, environment_name, output_path, output_name, start, end):
     honeycomb_client = ctx.obj['honeycomb_client']
     # load the environment to get all the assignments
@@ -86,10 +112,14 @@ def prepare_videos_for_environment_for_time_range(ctx, environment_name, output_
             hls_thumb_out = os.path.join(output_path, environment_id, output_name, assignment_name, "output-small.m3u8")
             thumb_path = os.path.join(output_path, environment_id, output_name, assignment_name, "output-small.mp4")
             with open(files_path, 'w') as fp:
+                count = 0
                 for line in sorted(download_manifest["files"]):
+                    # trim_video(line, f"{line}_trimed.mp4")
                     fp.write("file \'")
                     fp.write(os.path.basename(line))
-                    fp.write("\'\n")
+                    # fp.write(f"_trimed.mp4\' duration 00:00:10.000 inpoint {vts(count)} outpoint {vts(count + 1)}\n")
+                    fp.write(f"\' duration 00:00:10.000 inpoint {vts(count)} outpoint {vts(count + 1)}\n")
+                    count += 1
                 fp.flush()
             concat_videos(files_path, video_out, thumb_path=thumb_path)
             # prepare videos for HLS streaming

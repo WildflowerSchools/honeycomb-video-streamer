@@ -3,7 +3,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: honeycomb-video-streamer-prepare-2019-12-06
+  name: honeycomb-video-streamer-prepare-2020-01-10
   namespace: honeycomb
 spec:
   template:
@@ -13,7 +13,7 @@ spec:
     spec:
       containers:
       - name: migrate
-        image: wildflowerschools/honeycomb-video-streamer:prepare-v8
+        image: wildflowerschools/honeycomb-video-streamer:prepare-v11
         envFrom:
           - secretRef:
               name: honeycomb-client-settings
@@ -21,11 +21,11 @@ spec:
         - name: ENVIRONMENT_NAME
           value: capucine
         - name: OUTPUT_NAME
-          value: 2019-12-06
+          value: 2020-01-10
         - name: START_TIME
-          value: 2019-12-06T13:00
+          value: 2020-01-10T13:00
         - name: END_TIME
-          value: 2019-12-06T22:00
+          value: 2020-01-10T23:00
         volumeMounts:
           - name: efs-pvc
             mountPath: "/data"

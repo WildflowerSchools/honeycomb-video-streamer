@@ -25,3 +25,7 @@ docker-push: build-docker
 
 prepare-videos:
     @python -m honeycomb_tools prepare-videos-for-environment-for-time-range  --environment_name {{environment_name}} --output_path {{output_path}} --output_name {{output_name}} --start {{start}} --end {{end}}
+
+
+list-datapoints:
+    @python -m honeycomb_tools list-datapoints-for-environment-for-time-range  --environment_name {{environment_name}} --output_path ./ --output_name datapoints.csv --start {{start}} --end {{end}}
