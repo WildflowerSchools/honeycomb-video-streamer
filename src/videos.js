@@ -3,17 +3,20 @@ const cors = require("cors")
 const path = require("path")
 const securedSessionOrJWT = require("./auth").securedSessionOrJWT
 
-
-const PUBLIC_PATH = path.resolve(__dirname, process.env.ENVIRONMENT === "production" ? "public" : "../public")
+const PUBLIC_PATH = path.resolve(
+  __dirname,
+  process.env.ENVIRONMENT === "production" ? "public" : "../public"
+)
 
 const CONTENT_TYPE = {
   MANIFEST: "application/vnd.apple.mpegurl",
-  SEGMENT: "video/MP2T"
+  SEGMENT: "video/MP2T",
+  IMAGE: "image/jpeg"
 }
 
 function hlsContentHeaders(res, path, stat) {
   const ext = path.split(".").slice(-1)[0]
-  if (ext === "m3u8" || ext === "ts") {
+  if (ext === "m3u8" || ext === "ts" || ext === "jpg") {
     res.setHeader("Access-Control-Allow-Headers", "*")
     res.setHeader("Access-Control-Allow-Method", "GET")
     switch (ext) {
@@ -23,6 +26,9 @@ function hlsContentHeaders(res, path, stat) {
       case ".ts":
         res.setHeader("Content-Type", CONTENT_TYPE.SEGMENT)
         break
+      case ".jpg":
+        res.setHeader("Content-Type", CONTENT_TYPE.IMAGE)
+        break
     }
   }
 }
@@ -30,7 +36,7 @@ function hlsContentHeaders(res, path, stat) {
 const hlsStaticOptions = {
   dotfiles: "ignore",
   etag: false,
-  extensions: ["ts", "m3u8"],
+  extensions: ["ts", "m3u8", "jpg"],
   index: false,
   maxAge: "1d",
   redirect: false,
@@ -60,17 +66,7 @@ function handleVideoIndex(req, res) {
   } else if (isNaN(qDate.getTime())) {
     return res.json({ error: "date invalid" })
   } else {
-    if (
-      classroom === "capucine" &&
-      qDate.getTime() === new Date("2019-11-06").getTime()
-    ) {
-      // TODO: Build JSON video index response dynamically
-      res.sendFile("videos/capucine-001/index.json", {
-        root: PUBLIC_PATH
-      })
-    } else {
-      res.json({})
-    }
+    return res.json({ error: "missing req'd query params" })
   }
 }
 

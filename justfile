@@ -3,9 +3,9 @@ version := "v0-local"
 
 environment_name := "capucine"
 output_path := "public/videos"
-output_name := ""
-start := "13:00"
-end := "22:00"
+output_name := "2020-02-24"
+start := "2020-02-24T13:00"
+end := "2020-02-24T13:01"
 
 system-info:
     @echo "system info: {{ os() }} ({{ os_family() }}) on {{arch()}}".

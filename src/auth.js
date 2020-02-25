@@ -1,3 +1,4 @@
+const cookieParser = require("cookie-parser")
 const express = require("express")
 const router = express.Router()
 const expressSession = require("express-session")
@@ -10,7 +11,9 @@ const querystring = require("querystring")
 const jwksRsa = require("jwks-rsa")
 
 const session = {
-  secret: process.env.SESSION_SECRET ? process.env.SESSION_SECRET : "CCgp89X4gQmXtdqav9BxGxNP3DuA",
+  secret: process.env.SESSION_SECRET
+    ? process.env.SESSION_SECRET
+    : "CCgp89X4gQmXtdqav9BxGxNP3DuA",
   cookie: Object.assign(
     { secure: true, sameSite: "strict" },
     process.env.ENVIRONMENT !== "production" && {
@@ -29,7 +32,9 @@ const authConfig = {
   audience: process.env.AUTH0_AUDIENCE,
   clientID: process.env.AUTH0_CLIENT_ID,
   clientSecret: process.env.AUTH0_CLIENT_SECRET,
-  callbackURL: `https://${process.env.HOSTNAME ? process.env.HOSTNAME : "https://localhost:" + port}/callback`,
+  callbackURL: `https://${
+    process.env.HOSTNAME ? process.env.HOSTNAME : "https://localhost:" + port
+  }/callback`
 }
 
 const sessionStrategy = new Auth0Strategy(
@@ -52,6 +57,14 @@ const sessionStrategy = new Auth0Strategy(
   }
 )
 
+const extractJwtFromCookie = function(req) {
+  let token = null
+  if (req && req.cookies) {
+    token = req.cookies["wf.jwt"]
+  }
+  return token
+}
+
 const jwtStrategy = new JwtStrategy(
   {
     // Dynamically provide a signing key based on the kid in the header and the singing keys provided by the JWKS endpoint.
@@ -61,7 +74,10 @@ const jwtStrategy = new JwtStrategy(
       jwksRequestsPerMinute: 5,
       jwksUri: `https://${authConfig.domain}/.well-known/jwks.json`
     }),
-    jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+    jwtFromRequest: ExtractJwt.fromExtractors([
+      ExtractJwt.fromAuthHeaderAsBearerToken(),
+      extractJwtFromCookie
+    ]),
     // Validate the audience and the issuer.
     audience: authConfig.audience,
     issuer: `https://${authConfig.domain}/`,
@@ -131,6 +147,7 @@ router.get("/logout", (req, res) => {
 })
 
 exports.apply = function(app) {
+  app.use(cookieParser())
   app.use(expressSession(session))
   passport.use(sessionStrategy)
   passport.use(jwtStrategy)

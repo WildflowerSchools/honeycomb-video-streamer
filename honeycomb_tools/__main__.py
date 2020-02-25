@@ -10,7 +10,7 @@ import honeycomb
 
 from honeycomb_tools.introspection import get_assignments, get_datapoint_keys_for_assignment_in_range, process_assignment_datapoints_for_download, get_environment_id
 from honeycomb_tools.loader import execute_manifest
-from honeycomb_tools.transcode import concat_videos, prepare_hls, trim_video
+from honeycomb_tools.transcode import concat_videos, prepare_hls, generate_preview_image
 from honeycomb_tools.manifestations import add_classroom, add_date_to_classroom
 
 
@@ -111,6 +111,8 @@ def prepare_videos_for_environment_for_time_range(ctx, environment_name, output_
             hls_out = os.path.join(output_path, environment_id, output_name, assignment_name, "output.m3u8")
             hls_thumb_out = os.path.join(output_path, environment_id, output_name, assignment_name, "output-small.m3u8")
             thumb_path = os.path.join(output_path, environment_id, output_name, assignment_name, "output-small.mp4")
+            preview_image_out = os.path.join(output_path, environment_id, output_name, assignment_name, "output-preview.jpg")
+            preview_image_thumb_out = os.path.join(output_path, environment_id, output_name, assignment_name, "output-preview-small.jpg")
             with open(files_path, 'w') as fp:
                 count = 0
                 for line in sorted(download_manifest["files"]):
@@ -125,6 +127,10 @@ def prepare_videos_for_environment_for_time_range(ctx, environment_name, output_
             # prepare videos for HLS streaming
             prepare_hls(video_out, hls_out)
             prepare_hls(thumb_path, hls_thumb_out)
+
+            generate_preview_image(hls_out, preview_image_out)
+            generate_preview_image(hls_thumb_out, preview_image_thumb_out)
+
     # write a manifest
     add_date_to_classroom(output_path, environment_id, start[:10], output_name, [start[11:], end[11:]])
     manifest_path = os.path.join(output_path, environment_id, output_name, "index.json")
@@ -137,7 +143,9 @@ def prepare_videos_for_environment_for_time_range(ctx, environment_name, output_
                         {
                           "device_id": assignment_id,
                           "device_name": assignment_name,
-                          "url": f"/videos/{environment_id}/{output_name}/{assignment_name}/output.m3u8"
+                          "url": f"/videos/{environment_id}/{output_name}/{assignment_name}/output.m3u8",
+                          "preview_url": f"/videos/{environment_id}/{output_name}/{assignment_name}/output-preview.jpg",
+                          "preview_thumbnail_url": f"/videos/{environment_id}/{output_name}/{assignment_name}/output-preview-small.jpg",
                         } for assignment_id, assignment_name in assignments]
                     }, fp)
         fp.flush()

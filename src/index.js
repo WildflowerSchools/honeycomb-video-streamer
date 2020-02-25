@@ -26,4 +26,3 @@ applyErrors(app)
 console.log("listening")
 
 app.listen(port, () => console.log(`Listening on port ${port}!`))
-
