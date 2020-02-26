@@ -10,5 +10,7 @@ node_modules
 
 public/videos/
 data/
-
 prep/
+build/
+dist/
+venv/
