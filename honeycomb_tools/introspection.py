@@ -20,6 +20,7 @@ def get_assignments(honeycomb_client, environment_id):
               assigned {
                 ... on Device {
                   device_id
+                  device_type
                   part_number
                   name
                   tag_id
@@ -33,7 +34,7 @@ def get_assignments(honeycomb_client, environment_id):
         }
         """,
         {"environment_id": environment_id}).get("getEnvironment").get("assignments")
-    return [(assignment["assignment_id"], assignment["assigned"]["name"]) for assignment in assignments if assignment["assigned_type"] == "DEVICE" and assignment["assigned"]["name"].startswith("cc")]
+    return [(assignment["assignment_id"], assignment["assigned"]["name"]) for assignment in assignments if assignment["assigned_type"] == "DEVICE" and assignment["assigned"]["device_type"] in ["PI3WITHCAMERA", "PI4WITHCAMERA"]]
 
 
 def get_datapoint_keys_for_assignment_in_range(honeycomb_client, assignment_id, start, end):
