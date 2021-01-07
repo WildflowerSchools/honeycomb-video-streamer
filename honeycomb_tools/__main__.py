@@ -123,7 +123,9 @@ def prepare_videos_for_environment_for_time_range(ctx, environment_name, output_
                     fp.write(f"\' duration 00:00:10.000 inpoint {vts(count)} outpoint {vts(count + 1)}\n")
                     count += 1
                 fp.flush()
+
             concat_videos(files_path, video_out, thumb_path=thumb_path)
+
             # prepare videos for HLS streaming
             prepare_hls(video_out, hls_out)
             prepare_hls(thumb_path, hls_thumb_out)

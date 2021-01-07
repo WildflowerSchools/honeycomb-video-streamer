@@ -1,6 +1,6 @@
 {
   "name": "honeycomb-video-streamer",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Video streaming server that uses videos from honeycomb",
   "main": "src/index.js",
   "scripts": {
