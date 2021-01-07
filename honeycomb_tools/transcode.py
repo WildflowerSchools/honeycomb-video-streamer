@@ -33,7 +33,7 @@ def concat_videos(input_path, output_path, thumb_path=None, replace=False):
             else:
                 logging.info("small video already exists")
         except ffmpeg._run.Error as e:
-            logging.warning("concatenate videos (hls create) failed with ffmpeg Error, trying {}/{} (using replace=True)".format(ii, retries))
+            logging.warning("concatenate videos failed with ffmpeg Error, trying {}/{} (using replace=True)".format(ii, retries))
             logging.warning(e)
             replace = True
 
