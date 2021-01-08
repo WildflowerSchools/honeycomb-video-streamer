@@ -46,7 +46,7 @@ def concat_videos(input_path, output_path, thumb_path=None, replace=False):
                 if not thumb_exists:
                     ffmpeg.input(output_path).filter('scale', 320, -1).output(thumb_path).run()
                 else:
-                    logging.info("small video '{}' already exists").format(thumb_path)
+                    logging.info("small video '{}' already exists".format(thumb_path))
         except ffmpeg._run.Error as e:
             logging.warning("concatenate videos failed with ffmpeg Error, trying {}/{} (using replace=True)".format(ii, retries))
             logging.warning(e)
@@ -73,4 +73,4 @@ def generate_preview_image(input_path, output_path):
     if not os.path.exists(output_path):
         ffmpeg.input(input_path).output(output_path, format="image2", vframes=1).run()
     else:
-        logging.info("preview image {} already exists".format(output_path))
+        logging.info("preview image '{}' already exists".format(output_path))
