@@ -47,11 +47,12 @@ def concat_videos(input_path, output_path, thumb_path=None, replace=False):
                     ffmpeg.input(output_path).filter('scale', 320, -1).output(thumb_path).run()
                 else:
                     logging.info("small video '{}' already exists".format(thumb_path))
+
+                break
         except ffmpeg._run.Error as e:
             logging.warning("concatenate videos failed with ffmpeg Error, trying {}/{} (using replace=True)".format(ii, retries))
             logging.warning(e)
             replace = True
-
 
 def prepare_hls(input_path, output_path, hls_time=10, replace=False):
     hls_exists = os.path.exists(output_path)
