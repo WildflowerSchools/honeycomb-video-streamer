@@ -3,7 +3,7 @@ import os.path
 
 import ffmpeg
 
-from stream_reader import NonBlockingStreamReader, StreamTimeout
+from honeycomb_tools.stream_reader import NonBlockingStreamReader, StreamTimeout
 
 
 def is_valid_video(video_path):
