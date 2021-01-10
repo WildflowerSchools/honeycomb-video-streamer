@@ -3,15 +3,54 @@ import os.path
 
 import ffmpeg
 
+from stream_reader import NonBlockingStreamReader, StreamTimeout
+
 
 def is_valid_video(video_path):
+    """
+    Validate integrity of a video file. Include stream output reader to catch issue
+    with ffmpeg hanging when reading corrupted HLS video file.
+
+    TODO: Consider replacing the repeat_threshold logic with explicit check for repeated log msg that suggest HLS is stuck: "Skip ('#EXT-X-VERSION:3')\n"
+    TODO: Tweak timeout_threshold to find better balance between allowing time for file to be fully scanned and time to assume file read is simply stuck
+
+    :param video_path: Absolute/relative path to video
+    :return: boolean
+    """
     try:
-        ffmpeg.input(video_path).output("null", f="null").run()
+        # Read video file, output stdout to /dev/null, allow for repeated log messages, run aynchronously so we can scan output to stderr
+        process_vid = ffmpeg.input(video_path).output("/dev/null", f="null").global_args('-loglevel', 'repeat').run_async(pipe_stderr=True)
+        nb_stderr_stream = NonBlockingStreamReader(process_vid.stderr)
+
+        last_output = ''
+        repeat = 0
+        repeat_threshold = 30  # Number of times to allow a repeated log message
+        timeout_threshold = 1800  # Break if stderr hasn't output a msg in 30 minutes
+        while True:
+            output = nb_stderr_stream.readline(timeout_threshold)
+            if not output:
+                # Stream exhausted, file read successfully!
+                return True
+            logging.info(output)
+
+            if repeat >= repeat_threshold:
+                logging.warning('File read stuck in repeat loop, terminating read')
+                return False
+
+            if output == last_output:
+                repeat += 1
+            else:
+                repeat = 0
+
+            last_output = output
+    except StreamTimeout:
+        logging.warning('Stream timeout, ffmpeg hanging reading video file')
+        return False
     except ffmpeg._run.Error:
         logging.error("video file '{}' corrupt".format(video_path))
         return False
-    else:
-        return True
+
+    return True
 
 
 def trim_video(input_path, output_path, duration=10):
