@@ -19,6 +19,8 @@ class NonBlockingStreamReader:
             while True:
                 line = stream.readline()
                 queue.put(line)  # Final line will be a ''
+                if not line:
+                    break
 
         self._t = Thread(target=_populateQueue,
                          args=(self._s, self._q))
