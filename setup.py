@@ -11,7 +11,9 @@ BASE_DEPENDENCIES = [
     'python-dotenv>=0.10.3',
     'wildflower-honeycomb-sdk>=0.7.3',
     'boto3>=1.10.0',
-    'ffmpeg-python==0.1.17'
+    'ffmpeg-python==0.1.17',
+    'numpy>=1.19.5',
+    'pandas>=1.2.0'
 ]
 
 # allow setup.py to be run from any path
@@ -20,6 +22,7 @@ os.chdir(os.path.normpath(BASEDIR))
 setup(
     name='honeycomb-video-streamer',
     packages=find_packages(),
+    setup_requires=['numpy'],
     version=VERSION,
     include_package_data=True,
     description='Python tools to prepare videos for streaming from honeycomb',

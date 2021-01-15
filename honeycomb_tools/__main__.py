@@ -10,7 +10,7 @@ import honeycomb
 
 from honeycomb_tools.introspection import get_assignments, get_datapoint_keys_for_assignment_in_range, process_assignment_datapoints_for_download, get_environment_id
 from honeycomb_tools.loader import execute_manifest
-from honeycomb_tools.transcode import concat_videos, prepare_hls, generate_preview_image
+from honeycomb_tools.transcode import concat_videos, count_frames, generate_preview_image, pad_video, prepare_hls, trim_video
 from honeycomb_tools.manifestations import add_classroom, add_date_to_classroom
 
 
@@ -90,7 +90,11 @@ def vts(index):
 @click.option('--output_name', "-n", help='name to give the output video', required=True)
 @click.option('--start', help='start time of video to load expects format to be YYYY-MM-DDTHH:MM', required=True)
 @click.option('--end', help='end time of video to load expects format to be YYYY-MM-DDTHH:MM', required=True)
-def prepare_videos_for_environment_for_time_range(ctx, environment_name, output_path, output_name, start, end):
+@click.option('--rewrite', help='rewrite any generated images/video (i.e. hls feeds) (already downloaded raw videos are not destroyed or re-downloaded)', is_flag=True, default=False)
+def prepare_videos_for_environment_for_time_range(ctx, environment_name, output_path, output_name, start, end, rewrite):
+    if rewrite:
+        logging.warning("Rewrite flag enabled! All generated images/video will be recreated.")
+
     honeycomb_client = ctx.obj['honeycomb_client']
     # load the environment to get all the assignments
     environment_id = get_environment_id(honeycomb_client, environment_name)
@@ -101,9 +105,12 @@ def prepare_videos_for_environment_for_time_range(ctx, environment_name, output_
         datapoints = list(get_datapoint_keys_for_assignment_in_range(honeycomb_client, assignment_id, start, end))
         logging.info("%s has %i in %s=%s", assignment_name, len(datapoints), start, end)
         # fetch all of the videos for each camera
-        download_manifest = process_assignment_datapoints_for_download(f"{output_path}/{environment_id}/{output_name}/{assignment_name}/", datapoints)
+        download_manifest = process_assignment_datapoints_for_download(f"{output_path}/{environment_id}/{output_name}/{assignment_name}/", datapoints, start, end)
+
+        empty_clip_path = os.path.join(output_path, "empty_frames.video.mp4")
+
         # TODO - handle missing data
-        execute_manifest(download_manifest)
+        execute_manifest(download_manifest, empty_clip_path, rewrite)
         if len(download_manifest["files"]) > 0:
             # concatenate the videos per camera, TODO - fill in missing video gaps with black frames
             files_path = os.path.join(output_path, environment_id, output_name, assignment_name, "files.txt")
@@ -116,7 +123,12 @@ def prepare_videos_for_environment_for_time_range(ctx, environment_name, output_
             with open(files_path, 'w') as fp:
                 count = 0
                 for line in sorted(download_manifest["files"]):
-                    # trim_video(line, f"{line}_trimed.mp4")
+                    num_frames = count_frames(line)
+                    if num_frames < 100:
+                        pad_video(line, line, frames=(100 - num_frames))
+                    elif num_frames > 100:
+                        trim_video(line, line)
+
                     fp.write("file \'")
                     fp.write(os.path.basename(line))
                     # fp.write(f"_trimed.mp4\' duration 00:00:10.000 inpoint {vts(count)} outpoint {vts(count + 1)}\n")
@@ -124,11 +136,11 @@ def prepare_videos_for_environment_for_time_range(ctx, environment_name, output_
                     count += 1
                 fp.flush()
 
-            concat_videos(files_path, video_out, thumb_path=thumb_path)
+            concat_videos(files_path, video_out, thumb_path=thumb_path, rewrite=rewrite)
 
             # prepare videos for HLS streaming
-            prepare_hls(video_out, hls_out)
-            prepare_hls(thumb_path, hls_thumb_out)
+            prepare_hls(video_out, hls_out, rewrite=rewrite)
+            prepare_hls(thumb_path, hls_thumb_out, rewrite=rewrite)
 
             generate_preview_image(hls_out, preview_image_out)
             generate_preview_image(hls_thumb_out, preview_image_thumb_out)

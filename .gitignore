@@ -14,3 +14,7 @@ prep/
 build/
 dist/
 venv/
+
+.docker.env
+.eggs
+.python-version

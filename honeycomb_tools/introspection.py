@@ -1,5 +1,10 @@
+from datetime import datetime, timedelta
 import os
 import os.path
+import pytz
+
+import numpy as np
+import pandas as pd
 
 
 def get_environment_id(honeycomb_client, environment_name):
@@ -79,12 +84,34 @@ def get_datapoint_keys_for_assignment_in_range(honeycomb_client, assignment_id, 
             yield item
 
 
-def clean_ts(ts):
-    return ts.replace(":", "-")
+def clean_pd_ts(ts):
+    return ts.to_pydatetime().replace(tzinfo=None).isoformat(timespec='milliseconds') + 'Z'
 
 
-def process_assignment_datapoints_for_download(target, datapoints):
-    # TODO - check for missing files and handle the gaps
+def process_assignment_datapoints_for_download(target, datapoints, start, end):
+    if isinstance(end, str):
+        end_datetime = datetime.strptime(end, "%Y-%m-%dT%H:%M").replace(tzinfo=pytz.UTC)
+    else:
+        end_datetime = end
+
+    if isinstance(start, str):
+        start_datetime = datetime.strptime(start, "%Y-%m-%dT%H:%M").replace(tzinfo=pytz.UTC)
+    else:
+        start_datetime = start
+
+    datetimeindex = pd.date_range(start_datetime, end_datetime - timedelta(seconds=10), freq="10S", tz=pytz.UTC)
+
+    # Convert datapoints to a dataframe to use pd timeseries functionality
+    df_datapoints = pd.DataFrame(datapoints)
+    # Move timestamp column to datetime index
+    df_datapoints['timestamp'] = pd.to_datetime(df_datapoints['timestamp'], utc=True)
+    df_datapoints = df_datapoints.set_index(pd.DatetimeIndex(df_datapoints['timestamp']))
+    df_datapoints = df_datapoints.drop(columns=['timestamp'])
+    # Scrub duplicates (these shouldn't exist)
+    df_datapoints = df_datapoints[~df_datapoints.index.duplicated(keep='first')]
+    # Fill in missing time indices
+    df_datapoints = df_datapoints.reindex(datetimeindex)
+
     download = []
     missing = []
     files = []
@@ -93,9 +120,15 @@ def process_assignment_datapoints_for_download(target, datapoints):
         "missing": missing,
         "files": files,
     }
-    ts = "1970-01-01T00:00:00"
-    for item in datapoints:
-        output = os.path.join(target, f"{clean_ts(item['timestamp'])}.video.mp4")
-        download.append({"bucketName": item["file"]["bucketName"], "key": item["file"]["key"], "output": output})
+    for idx_datetime, row in df_datapoints.iterrows():
+        output = os.path.join(target, f"{clean_pd_ts(idx_datetime)}.video.mp4")
+
+        if pd.isnull(row['data_id']):
+            missing.append(output)
+        else:
+            output = os.path.join(target, f"{clean_pd_ts(idx_datetime)}.video.mp4")
+            download.append({"bucketName": row["file"]["bucketName"], "key": row["file"]["key"], "output": output})
+
         files.append(output)
+
     return manifest
