@@ -1,5 +1,5 @@
 
-version := "v21"
+version := "v22"
 
 environment_name := "capucine"
 output_path := "public/videos"
