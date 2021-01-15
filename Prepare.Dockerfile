@@ -1,6 +1,6 @@
 FROM python:3.8.2-alpine
 
-RUN apk add ffmpeg
+RUN apk add ffmpeg g++
 
 RUN mkdir -p /app
 RUN mkdir -p /app/honeycomb_tools
