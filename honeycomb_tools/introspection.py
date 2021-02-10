@@ -3,7 +3,6 @@ import os
 import os.path
 import pytz
 
-import numpy as np
 import pandas as pd
 
 
@@ -103,14 +102,15 @@ def process_assignment_datapoints_for_download(target, datapoints, start, end):
 
     # Convert datapoints to a dataframe to use pd timeseries functionality
     df_datapoints = pd.DataFrame(datapoints)
-    # Move timestamp column to datetime index
-    df_datapoints['timestamp'] = pd.to_datetime(df_datapoints['timestamp'], utc=True)
-    df_datapoints = df_datapoints.set_index(pd.DatetimeIndex(df_datapoints['timestamp']))
-    df_datapoints = df_datapoints.drop(columns=['timestamp'])
-    # Scrub duplicates (these shouldn't exist)
-    df_datapoints = df_datapoints[~df_datapoints.index.duplicated(keep='first')]
-    # Fill in missing time indices
-    df_datapoints = df_datapoints.reindex(datetimeindex)
+    if len(datapoints) > 0:
+        # Move timestamp column to datetime index
+        df_datapoints['timestamp'] = pd.to_datetime(df_datapoints['timestamp'], utc=True)
+        df_datapoints = df_datapoints.set_index(pd.DatetimeIndex(df_datapoints['timestamp']))
+        df_datapoints = df_datapoints.drop(columns=['timestamp'])
+        # Scrub duplicates (these shouldn't exist)
+        df_datapoints = df_datapoints[~df_datapoints.index.duplicated(keep='first')]
+        # Fill in missing time indices
+        df_datapoints = df_datapoints.reindex(datetimeindex)
 
     download = []
     missing = []

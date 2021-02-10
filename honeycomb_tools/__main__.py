@@ -103,7 +103,11 @@ def prepare_videos_for_environment_for_time_range(ctx, environment_name, output_
     assignments = get_assignments(honeycomb_client, environment_id)
     for assignment_id, assignment_name in assignments:
         datapoints = list(get_datapoint_keys_for_assignment_in_range(honeycomb_client, assignment_id, start, end))
+
         logging.info("%s has %i in %s=%s", assignment_name, len(datapoints), start, end)
+        if len(datapoints) == 0:
+            logging.warning("No videos for assignment: '{}':{}".format(assignment_id, assignment_name))
+
         # fetch all of the videos for each camera
         download_manifest = process_assignment_datapoints_for_download(f"{output_path}/{environment_id}/{output_name}/{assignment_name}/", datapoints, start, end)
 
