@@ -99,9 +99,18 @@ def prepare_videos_for_environment_for_time_range(ctx, environment_name, output_
     # load the environment to get all the assignments
     environment_id = get_environment_id(honeycomb_client, environment_name)
     add_classroom(output_path, environment_name, environment_id)
+
+    # prep this output's environment index.json manifest file
+    # this index will point to each camera's HLS and thumbnail assets
+    manifest_path = os.path.join(output_path, environment_id, output_name, "index.json")
+    os.makedirs(os.path.dirname(manifest_path), exist_ok=True)
+
+    # track video json to write to environment's index.json
+    video_meta = []
+
     # evaluate the assignments to filter out non-camera assignments
     assignments = get_assignments(honeycomb_client, environment_id)
-    for assignment_id, assignment_name in assignments:
+    for idx, (assignment_id, assignment_name) in enumerate(assignments):
         datapoints = list(get_datapoint_keys_for_assignment_in_range(honeycomb_client, assignment_id, start, end))
 
         logging.info("%s has %i in %s=%s", assignment_name, len(datapoints), start, end)
@@ -113,10 +122,8 @@ def prepare_videos_for_environment_for_time_range(ctx, environment_name, output_
 
         empty_clip_path = os.path.join(output_path, "empty_frames.video.mp4")
 
-        # TODO - handle missing data
         execute_manifest(download_manifest, empty_clip_path, rewrite)
         if len(download_manifest["files"]) > 0:
-            # concatenate the videos per camera, TODO - fill in missing video gaps with black frames
             files_path = os.path.join(output_path, environment_id, output_name, assignment_name, "files.txt")
             video_out = os.path.join(output_path, environment_id, output_name, assignment_name, "output.mp4")
             hls_out = os.path.join(output_path, environment_id, output_name, assignment_name, "output.m3u8")
@@ -149,25 +156,26 @@ def prepare_videos_for_environment_for_time_range(ctx, environment_name, output_
             generate_preview_image(hls_out, preview_image_out)
             generate_preview_image(hls_thumb_out, preview_image_thumb_out)
 
-    # write a manifest
-    add_date_to_classroom(output_path, environment_id, start[:10], output_name, [start[11:], end[11:]])
-    manifest_path = os.path.join(output_path, environment_id, output_name, "index.json")
-    os.makedirs(os.path.dirname(manifest_path), exist_ok=True)
-    with open(manifest_path, 'w') as fp:
-        json.dump({
-                      "start": start,
-                      "end": end,
-                      "videos": [
-                        {
-                          "device_id": assignment_id,
-                          "device_name": assignment_name,
-                          "url": f"/videos/{environment_id}/{output_name}/{assignment_name}/output.m3u8",
-                          "preview_url": f"/videos/{environment_id}/{output_name}/{assignment_name}/output-preview.jpg",
-                          "preview_thumbnail_url": f"/videos/{environment_id}/{output_name}/{assignment_name}/output-preview-small.jpg",
-                        } for assignment_id, assignment_name in assignments]
-                    }, fp)
-        fp.flush()
-    # done
+            video_meta.append({
+                "device_id": assignment_id,
+                "device_name": assignment_name,
+                "url": f"/videos/{environment_id}/{output_name}/{assignment_name}/output.m3u8",
+                "preview_url": f"/videos/{environment_id}/{output_name}/{assignment_name}/output-preview.jpg",
+                "preview_thumbnail_url": f"/videos/{environment_id}/{output_name}/{assignment_name}/output-preview-small.jpg",
+            })
+
+        # Add a record in the classroom's index that points to this run's video feeds
+        add_date_to_classroom(output_path, environment_id, start[:10], output_name, [start[11:], end[11:]])
+
+        with open(manifest_path, 'w') as fp:
+            json.dump({
+                          "start": start,
+                          "end": end,
+                          "videos": video_meta,
+                          "building": (idx < len(assignments) - 1)
+                        }, fp)
+            fp.flush()
+            # done
 
 
 def parse_day(day):

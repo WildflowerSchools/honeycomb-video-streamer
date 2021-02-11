@@ -44,7 +44,7 @@ def add_date_to_classroom(root_path, classroom_id, date, name, time_range):
     classroom = read_classroom_index(root_path, classroom_id)
     names = {entry.get("name") for entry in classroom}
     if name in names:
-        print(f"entry `{name}` already exists {names}")
+        print(f"entry `{name}` already exists in classroom index.json: {names}")
         return
     classroom.append({
                         "name": name,
