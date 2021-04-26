@@ -11,7 +11,7 @@ BASE_DEPENDENCIES = [
     'python-dotenv>=0.10.3',
     'wildflower-honeycomb-sdk>=0.7.3',
     'boto3>=1.10.0',
-    'ffmpeg-python==0.1.17',
+    'ffmpeg-python==0.2.0',
     'numpy>=1.19.5',
     'pandas>=1.2.0'
 ]

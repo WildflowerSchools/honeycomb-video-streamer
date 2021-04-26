@@ -54,11 +54,16 @@ def is_valid_video(video_path):
     return True
 
 
-def count_frames(video_path):
+def count_frames(mp4_video_path):
     # ffprobe -v error -select_streams v:0 -show_entries stream=nb_frames -of default=nokey=1:noprint_wrappers=1
-    probe = ffmpeg.probe(video_path)
+    probe = ffmpeg.probe(mp4_video_path)
     video_stream = next((stream for stream in probe['streams'] if stream['codec_type'] == 'video'), None)
     return int(video_stream['nb_frames'])
+
+
+def get_duration(hls_video_path):
+    probe = ffmpeg.probe(hls_video_path)
+    return float(probe['format']['duration'])
 
 
 def trim_video(input_path, output_path, duration=10):
@@ -79,8 +84,13 @@ def trim_video(input_path, output_path, duration=10):
 
 
 def concat_videos(input_path, output_path, thumb_path=None, rewrite=False):
+    success = False
+
     retries = 3
     for ii in range(retries):
+        if success:
+            break
+
         try:
             concat_mp4_exists = os.path.exists(output_path)
             if concat_mp4_exists:
@@ -89,8 +99,8 @@ def concat_videos(input_path, output_path, thumb_path=None, rewrite=False):
                     concat_mp4_exists = False
 
             if not concat_mp4_exists:
-                files = ffmpeg.input(input_path, format='concat', safe=0, r=10)
-                files.output(output_path, c="copy", r=10, vsync=0).run()
+                files = ffmpeg.input(f"file:{input_path}", format='concat', safe=0, r=10)
+                files.output(f"file:{output_path}", c="copy", r=10, vsync=0).run()
             else:
                 logging.info("concatenated video '{}' already exists".format(output_path))
 
@@ -106,26 +116,40 @@ def concat_videos(input_path, output_path, thumb_path=None, rewrite=False):
                 else:
                     logging.info("small video '{}' already exists".format(thumb_path))
 
-                break
+            success = True
         except ffmpeg._run.Error as e:
-            logging.warning("concatenate videos failed with ffmpeg Error, trying {}/{} (using rewrite=True)".format(ii, retries))
+            logging.warning("concatenate videos failed with ffmpeg Error, tried {}/{} (using rewrite=True)".format(ii + 1, retries))
             logging.warning(e)
             rewrite = True
 
+    if not success:
+        raise Exception("Failed concatenating mp4 file")
 
-def prepare_hls(input_path, output_path, hls_time=10, rewrite=False):
+
+def prepare_hls(input_path, output_path, hls_time=10, rewrite=False, append=True):
     hls_exists = os.path.exists(output_path)
 
     if hls_exists:
-        if rewrite or not is_valid_video(output_path):
+        # Commenting out valid video check, great idea but is VERY SLOW:
+        if rewrite:  # or not is_valid_video(output_path):
             os.remove(output_path)
             hls_exists = False
 
     if not hls_exists:
         # ffmpeg -i ./public/videos/test/cc-1/output-small.mp4 -profile:v baseline -level 3.0 -s 640x360 -start_number 0 -hls_time 10 -hls_list_size 0 -f hls public/videos/output.m3u8
-        ffmpeg.input(input_path).output(output_path, format="hls", hls_list_size=0, c="copy").run()
+        ffmpeg.input(input_path).output(output_path,
+                                        format="hls",
+                                        hls_list_size=0,
+                                        c="copy").run()
     else:
-        logging.info("hls video '{}' already exists".format(output_path))
+        if append:
+            ffmpeg.input(input_path).output(output_path,
+                                            format="hls",
+                                            hls_list_size=0,
+                                            c="copy",
+                                            hls_flags="append_list").run()
+        else:
+            logging.info("hls video '{}' already exists, and append mode set to 'False'".format(output_path))
 
 
 def generate_preview_image(input_path, output_path, rewrite=False):

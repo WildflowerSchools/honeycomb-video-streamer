@@ -27,7 +27,8 @@ def load_file(spec):
 
 
 def execute_manifest(manifest, empty_clip_path, rewrite=False):
-    for output_path in manifest['missing']:
+    for missing in manifest['missing']:
+        output_path = missing['output']
         create_dir(output_path)
         copy_technical_difficulties_clip(empty_clip_path, output_path, rewrite)
 

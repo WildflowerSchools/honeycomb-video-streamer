@@ -121,14 +121,15 @@ def process_assignment_datapoints_for_download(target, datapoints, start, end):
         "files": files,
     }
     for idx_datetime, row in df_datapoints.iterrows():
-        output = os.path.join(target, f"{clean_pd_ts(idx_datetime)}.video.mp4")
+        formatted_time = clean_pd_ts(idx_datetime)
+        output = os.path.join(target, f"{formatted_time}.video.mp4")
 
         if pd.isnull(row['data_id']):
-            missing.append(output)
+            missing.append({"output": output, "start": formatted_time})
         else:
-            output = os.path.join(target, f"{clean_pd_ts(idx_datetime)}.video.mp4")
-            download.append({"bucketName": row["file"]["bucketName"], "key": row["file"]["key"], "output": output})
+            output = os.path.join(target, f"{formatted_time}.video.mp4")
+            download.append({"bucketName": row["file"]["bucketName"], "key": row["file"]["key"], "output": output, "start": formatted_time})
 
-        files.append(output)
+        files.append({"output": output, "start": formatted_time})
 
     return manifest

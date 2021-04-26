@@ -32,10 +32,13 @@ const authConfig = {
   audience: process.env.AUTH0_AUDIENCE,
   clientID: process.env.AUTH0_CLIENT_ID,
   clientSecret: process.env.AUTH0_CLIENT_SECRET,
-  callbackURL: `https://${
-    process.env.HOSTNAME ? process.env.HOSTNAME : "https://localhost:" + port
-  }/callback`
+  // callbackURL: `https://${
+  //   process.env.HOSTNAME ? process.env.HOSTNAME : "localhost:" + port
+  // }/callback`
+  callbackURL: process.env.AUTH0_CALLBACK_URL
 }
+
+console.log(authConfig.callbackURL)
 
 const sessionStrategy = new Auth0Strategy(
   {
