@@ -174,10 +174,11 @@ def prepare_videos_for_environment_for_time_range(ctx, environment_name, output_
                     logger.error("Unexpected start_time for camera '{}': {} != {}. Recreating HLS stream...".format(assignment_name, camera_start_time, index_manifest['start']))
                     camera_video_history = []
                     rewrite_current = True
-                elif date_time_parse(index_manifest['end']) != date_time_parse(camera_end_time):
-                    logger.error("Unexpected end_time for camera '{}': {} != {}. Recreating HLS stream...".format(assignment_name, camera_end_time, index_manifest['end']))
-                    camera_video_history = []
-                    rewrite_current = True
+                # elif date_time_parse(index_manifest['end']) != date_time_parse(camera_end_time):
+                #     # Consider mismatching end times to be okay. Possible that queried for videos were not all ready on previous runs
+                #     logger.error("Unexpected end_time for camera '{}': {} != {}. Recreating HLS stream...".format(assignment_name, camera_end_time, index_manifest['end']))
+                #     camera_video_history = []
+                #     rewrite_current = True
                 else:
                     expected_duration = (date_time_parse(camera_end_time) - date_time_parse(camera_start_time)).total_seconds()
                     actual_duration = get_duration(hls_out)
@@ -224,7 +225,7 @@ def prepare_videos_for_environment_for_time_range(ctx, environment_name, output_
 
                 if current_video_history['end_time'] is None or \
                     file_end_time > datetime.fromisoformat(current_video_history['end_time'].rstrip('Z')):
-                    current_video_history['end_time'] = file_end_time.isoformat(sep=' ', timespec='milliseconds')
+                    current_video_history['end_time'] = file_end_time.isoformat(sep='T', timespec='seconds')
 
                 num_frames = count_frames(line)
                 if num_frames < 100:
@@ -239,7 +240,7 @@ def prepare_videos_for_environment_for_time_range(ctx, environment_name, output_
             fp.flush()
 
         if len(current_video_history['files']) > 0:
-            concat_videos(current_input_files_path, video_out_path, thumb_path=thumb_out_path, rewrite=rewrite_current)
+            concat_videos(current_input_files_path, video_out_path, thumb_path=thumb_out_path, rewrite=True)
 
             # prepare videos for HLS streaming
             prepare_hls(video_out_path, hls_out, rewrite=rewrite_current, append=append)
