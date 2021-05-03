@@ -11,9 +11,13 @@ BASE_DEPENDENCIES = [
     'python-dotenv>=0.10.3',
     'wildflower-honeycomb-sdk>=0.7.3',
     'boto3>=1.10.0',
-    'ffmpeg-python==0.1.17',
+    'ffmpeg-python==0.2.0',
     'numpy>=1.19.5',
     'pandas>=1.2.0'
+]
+
+DEVELOPMENT_DEPENDENCIES = [
+    'autopep8>=1.5.5'
 ]
 
 # allow setup.py to be run from any path
@@ -31,6 +35,9 @@ setup(
     author='Paul DeCoursey',
     author_email='paul.decoursey@wildflowerschools.org',
     install_requires=BASE_DEPENDENCIES,
+    extras_require={
+        'development': DEVELOPMENT_DEPENDENCIES
+    },
     keywords=['video'],
     classifiers=[
         'Intended Audience :: Developers',

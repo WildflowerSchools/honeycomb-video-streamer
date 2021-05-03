@@ -3,20 +3,21 @@ const cors = require("cors")
 const path = require("path")
 const securedSessionOrJWT = require("./auth").securedSessionOrJWT
 
-const PUBLIC_PATH = path.resolve(
+const PUBLIC_PATH = process.env.PUBLIC_PATH ? process.env.PUBLIC_PATH : path.resolve(
   __dirname,
-  process.env.ENVIRONMENT === "production" ? "public" : "../public"
+  "public"
 )
 
 const CONTENT_TYPE = {
   MANIFEST: "application/vnd.apple.mpegurl",
   SEGMENT: "video/MP2T",
-  IMAGE: "image/jpeg"
+  IMAGE: "image/jpeg",
+  JSON: "application/json"
 }
 
 function hlsContentHeaders(res, path, stat) {
   const ext = path.split(".").slice(-1)[0]
-  if (ext === "m3u8" || ext === "ts" || ext === "jpg") {
+  if (ext === "m3u8" || ext === "ts" || ext === "jpg" || ext === "json") {
     res.setHeader("Access-Control-Allow-Headers", "*")
     res.setHeader("Access-Control-Allow-Method", "GET")
     switch (ext) {
@@ -29,6 +30,9 @@ function hlsContentHeaders(res, path, stat) {
       case ".jpg":
         res.setHeader("Content-Type", CONTENT_TYPE.IMAGE)
         break
+      case ".json":
+        res.setHeader("Content-Type", CONTENT_TYPE.JSON)
+        break
     }
   }
 }
@@ -36,7 +40,7 @@ function hlsContentHeaders(res, path, stat) {
 const hlsStaticOptions = {
   dotfiles: "ignore",
   etag: false,
-  extensions: ["ts", "m3u8", "jpg"],
+  extensions: ["ts", "m3u8", "jpg", "json"],
   index: false,
   maxAge: "1d",
   redirect: false,

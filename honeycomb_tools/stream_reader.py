@@ -35,4 +35,5 @@ class NonBlockingStreamReader:
             raise StreamTimeout
 
 
-class StreamTimeout(Exception): pass
+class StreamTimeout(Exception):
+    pass

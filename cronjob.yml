@@ -1,0 +1,44 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  namespace: honeycomb
+  name: honeycomb-video-streamer-prepare-cronjob-2021-05-03
+spec:
+  schedule: "10 * * * *"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: honeycomb-video-streamer-prepare-cronjob-2021-05-03
+              imagePullPolicy: Always
+              image: wildflowerschools/honeycomb-video-streamer:prepare-v27
+              resources:
+                requests:
+                  cpu: "2000m"
+                limits:
+                  cpu: "3000m"
+              envFrom:
+                - secretRef:
+                    name: honeycomb-client-settings
+              env:
+                - name: ENVIRONMENT_NAME
+                  value: greenbrier
+                - name: OUTPUT_NAME
+                  value: 2021-05-03
+                - name: START_TIME
+                  value: 2021-05-03T12:30
+                - name: END_TIME
+                  value: 2021-05-03T21:30
+                - name: APPEND
+                  value: "true"
+              volumeMounts:
+                - name: efs-pvc
+                  mountPath: "/data"
+          restartPolicy: OnFailure
+          volumes:
+            - name: efs-pvc
+              persistentVolumeClaim:
+                claimName: efs
+      backoffLimit: 4
