@@ -4,11 +4,14 @@ metadata:
   namespace: honeycomb
   name: honeycomb-video-streamer-prepare-cronjob-2021-05-03
 spec:
-  schedule: "10 * * * *"
+  schedule: "*/10 * * * *"
   concurrencyPolicy: Forbid
   jobTemplate:
     spec:
       template:
+        metadata:
+          annotations:
+            iam.amazonaws.com/role: honeycomb-role
         spec:
           containers:
             - name: honeycomb-video-streamer-prepare-cronjob-2021-05-03
