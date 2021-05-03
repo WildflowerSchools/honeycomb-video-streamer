@@ -10,6 +10,12 @@ end := "2020-02-24T13:01"
 system-info:
     @echo "system info: {{ os() }} ({{ os_family() }}) on {{arch()}}".
 
+fmt-python:
+    autopep8 --aggressive --recursive --in-place ./honeycomb_tools/
+
+install-dev:
+    pip install -e .[development]
+
 _build-docker-service:
     @docker build -t wildflowerschools/honeycomb-video-streamer:{{version}} -f Dockerfile .
 

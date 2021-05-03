@@ -16,6 +16,10 @@ BASE_DEPENDENCIES = [
     'pandas>=1.2.0'
 ]
 
+DEVELOPMENT_DEPENDENCIES = [
+    'autopep8>=1.5.5'
+]
+
 # allow setup.py to be run from any path
 os.chdir(os.path.normpath(BASEDIR))
 
@@ -31,6 +35,9 @@ setup(
     author='Paul DeCoursey',
     author_email='paul.decoursey@wildflowerschools.org',
     install_requires=BASE_DEPENDENCIES,
+    extras_require={
+        'development': DEVELOPMENT_DEPENDENCIES
+    },
     keywords=['video'],
     classifiers=[
         'Intended Audience :: Developers',

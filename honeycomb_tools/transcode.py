@@ -19,8 +19,14 @@ def is_valid_video(video_path):
     :return: boolean
     """
     try:
-        # Read video file, output stdout to /dev/null, allow for repeated log messages, run aynchronously so we can scan output to stderr
-        process_vid = ffmpeg.input(video_path).output("/dev/null", f="null").global_args('-loglevel', 'repeat').run_async(pipe_stderr=True)
+        # Read video file, output stdout to /dev/null, allow for repeated log
+        # messages, run aynchronously so we can scan output to stderr
+        process_vid = ffmpeg.input(video_path).output(
+            "/dev/null",
+            f="null").global_args(
+            '-loglevel',
+            'repeat').run_async(
+            pipe_stderr=True)
         nb_stderr_stream = NonBlockingStreamReader(process_vid.stderr)
 
         last_output = ''
@@ -35,7 +41,8 @@ def is_valid_video(video_path):
             logging.info(output)
 
             if repeat >= repeat_threshold:
-                logging.warning('File read stuck in repeat loop, terminating read')
+                logging.warning(
+                    'File read stuck in repeat loop, terminating read')
                 return False
 
             if output == last_output:
@@ -55,9 +62,13 @@ def is_valid_video(video_path):
 
 
 def count_frames(mp4_video_path):
-    # ffprobe -v error -select_streams v:0 -show_entries stream=nb_frames -of default=nokey=1:noprint_wrappers=1
+    # ffprobe -v error -select_streams v:0 -show_entries stream=nb_frames -of
+    # default=nokey=1:noprint_wrappers=1
     probe = ffmpeg.probe(mp4_video_path)
-    video_stream = next((stream for stream in probe['streams'] if stream['codec_type'] == 'video'), None)
+    video_stream = next(
+        (stream for stream in probe['streams']
+         if stream['codec_type'] == 'video'),
+        None)
     return int(video_stream['nb_frames'])
 
 
@@ -67,14 +78,22 @@ def get_duration(hls_video_path):
 
 
 def trim_video(input_path, output_path, duration=10):
-    logging.info("Trimming video '{}' down to {} seconds".format(input_path, duration))
+    logging.info(
+        "Trimming video '{}' down to {} seconds".format(
+            input_path, duration))
 
     try:
         if input_path == output_path:
             input_path = "{}.tmp".format(input_path)
             shutil.copy(output_path, input_path)
 
-        ffmpeg.input(input_path, ss=0, to=duration).output(output_path, r=10, vframes=100).overwrite_output().run()
+        ffmpeg.input(
+            input_path,
+            ss=0,
+            to=duration).output(
+            output_path,
+            r=10,
+            vframes=100).overwrite_output().run()
     except ffmpeg._run.Error as e:
         logging.error("Failed trimming video {}".format(input_path))
         logging.error(e)
@@ -99,10 +118,16 @@ def concat_videos(input_path, output_path, thumb_path=None, rewrite=False):
                     concat_mp4_exists = False
 
             if not concat_mp4_exists:
-                files = ffmpeg.input(f"file:{input_path}", format='concat', safe=0, r=10)
-                files.output(f"file:{output_path}", c="copy", r=10, vsync=0).run()
+                files = ffmpeg.input(
+                    f"file:{input_path}", format='concat', safe=0, r=10)
+                files.output(
+                    f"file:{output_path}",
+                    c="copy",
+                    r=10,
+                    vsync=0).run()
             else:
-                logging.info("concatenated video '{}' already exists".format(output_path))
+                logging.info(
+                    "concatenated video '{}' already exists".format(output_path))
 
             if thumb_path is not None:
                 thumb_exists = os.path.exists(thumb_path)
@@ -112,13 +137,16 @@ def concat_videos(input_path, output_path, thumb_path=None, rewrite=False):
                         thumb_exists = False
 
                 if not thumb_exists:
-                    ffmpeg.input(output_path).filter('scale', 320, -1).output(thumb_path, preset='veryfast').run()
+                    ffmpeg.input(output_path).filter(
+                        'scale', 320, -1).output(thumb_path, preset='veryfast').run()
                 else:
-                    logging.info("small video '{}' already exists".format(thumb_path))
+                    logging.info(
+                        "small video '{}' already exists".format(thumb_path))
 
             success = True
         except ffmpeg._run.Error as e:
-            logging.warning("concatenate videos failed with ffmpeg Error, tried {}/{} (using rewrite=True)".format(ii + 1, retries))
+            logging.warning(
+                "concatenate videos failed with ffmpeg Error, tried {}/{} (using rewrite=True)".format(ii + 1, retries))
             logging.warning(e)
             rewrite = True
 
@@ -126,7 +154,8 @@ def concat_videos(input_path, output_path, thumb_path=None, rewrite=False):
         raise Exception("Failed concatenating mp4 file")
 
 
-def prepare_hls(input_path, output_path, hls_time=10, rewrite=False, append=True):
+def prepare_hls(input_path, output_path, hls_time=10,
+                rewrite=False, append=True):
     hls_exists = os.path.exists(output_path)
 
     if hls_exists:
@@ -136,7 +165,9 @@ def prepare_hls(input_path, output_path, hls_time=10, rewrite=False, append=True
             hls_exists = False
 
     if not hls_exists:
-        # ffmpeg -i ./public/videos/test/cc-1/output-small.mp4 -profile:v baseline -level 3.0 -s 640x360 -start_number 0 -hls_time 10 -hls_list_size 0 -f hls public/videos/output.m3u8
+        # ffmpeg -i ./public/videos/test/cc-1/output-small.mp4 -profile:v
+        # baseline -level 3.0 -s 640x360 -start_number 0 -hls_time 10
+        # -hls_list_size 0 -f hls public/videos/output.m3u8
         ffmpeg.input(input_path).output(output_path,
                                         format="hls",
                                         hls_list_size=0,
@@ -149,7 +180,8 @@ def prepare_hls(input_path, output_path, hls_time=10, rewrite=False, append=True
                                             c="copy",
                                             hls_flags="append_list").run()
         else:
-            logging.info("hls video '{}' already exists, and append mode set to 'False'".format(output_path))
+            logging.info(
+                "hls video '{}' already exists, and append mode set to 'False'".format(output_path))
 
 
 def generate_preview_image(input_path, output_path, rewrite=False):
@@ -160,9 +192,11 @@ def generate_preview_image(input_path, output_path, rewrite=False):
             os.remove(output_path)
             preview_exists = False
 
-    # ffmpeg -y -i ./public/videos/test/cc-1/output.m3u8 -f image2 -vframes 1 preview.jpg
+    # ffmpeg -y -i ./public/videos/test/cc-1/output.m3u8 -f image2 -vframes 1
+    # preview.jpg
     if not preview_exists:
-        ffmpeg.input(input_path).output(output_path, format="image2", vframes=1).run()
+        ffmpeg.input(input_path).output(
+            output_path, format="image2", vframes=1).run()
     else:
         logging.info("preview image '{}' already exists".format(output_path))
 
@@ -178,8 +212,14 @@ def create_technical_difficulties_clip(clip_path):
         duration = 10
         fps = 10
         clip = ffmpeg.input(input_path, loop=1, to=duration)
-        # Added vframes to for 100 frames and prevent ffmpeg from adding an additional 2 rogue frames
-        clip.output(clip_path, r=fps, format='mp4', pix_fmt='bgr24', vframes=100).run()
+        # Added vframes to for 100 frames and prevent ffmpeg from adding an
+        # additional 2 rogue frames
+        clip.output(
+            clip_path,
+            r=fps,
+            format='mp4',
+            pix_fmt='bgr24',
+            vframes=100).run()
 
 
 def copy_technical_difficulties_clip(clip_path, output_path, rewrite=False):
@@ -200,10 +240,13 @@ def pad_video(input_path, output_path, frames):
     :return: boolean
     """
 
-    logging.info("Padding video '{}' with {} frames".format(input_path, frames))
+    logging.info(
+        "Padding video '{}' with {} frames".format(
+            input_path, frames))
 
     if frames <= 0:
-        logging.warning("Frame padding giving to pad_video smaller than 1: {}".format(frames))
+        logging.warning(
+            "Frame padding giving to pad_video smaller than 1: {}".format(frames))
         return False
 
     try:
@@ -212,9 +255,13 @@ def pad_video(input_path, output_path, frames):
             shutil.copy(output_path, input_path)
 
         stop_duration = frames / 10
-        ffmpeg.input(input_path).output(output_path, filter_complex="tpad=stop_duration={}:stop_mode=clone".format(stop_duration)).overwrite_output().run()
+        ffmpeg.input(input_path).output(
+            output_path,
+            filter_complex="tpad=stop_duration={}:stop_mode=clone".format(stop_duration)).overwrite_output().run()
     except ffmpeg._run.Error as e:
-        logging.error("Failed padding {} with {} additional frames".format(input_path, frames))
+        logging.error(
+            "Failed padding {} with {} additional frames".format(
+                input_path, frames))
         logging.error(e)
         return False
 

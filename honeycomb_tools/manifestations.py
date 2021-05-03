@@ -44,16 +44,17 @@ def add_date_to_classroom(root_path, classroom_id, date, name, time_range):
     classroom = read_classroom_index(root_path, classroom_id)
     names = {entry.get("name") for entry in classroom}
     if name in names:
-        print(f"entry `{name}` already exists in classroom index.json: {names}")
+        print(
+            f"entry `{name}` already exists in classroom index.json: {names}")
         return
     classroom.append({
-                        "name": name,
-                        "url": f"/videos/{classroom_id}/{date}/index.json",
-                        "date": date,
-                        "ranges": [
-                            time_range
-                        ]
-                     })
+        "name": name,
+        "url": f"/videos/{classroom_id}/{date}/index.json",
+        "date": date,
+        "ranges": [
+            time_range
+        ]
+    })
     index_location = os.path.join(root_path, classroom_id, "index.json")
     os.makedirs(os.path.dirname(index_location), exist_ok=True)
     with open(index_location, 'w') as fp:
@@ -68,6 +69,6 @@ if __name__ == '__main__':
     root_path = "./public/videos"
     classrooms = read_classrooms(root_path)
     print(read_classroom_index(root_path, classrooms[0].get("id")))
-    add_date_to_classroom(root_path, classrooms[0].get("id"), "2019-12-05", "super sparkle time", ["15:00", "23:00"])
+    add_date_to_classroom(root_path, classrooms[0].get(
+        "id"), "2019-12-05", "super sparkle time", ["15:00", "23:00"])
     print(read_classroom_index(root_path, classrooms[0].get("id")))
-
