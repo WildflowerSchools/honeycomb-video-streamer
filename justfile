@@ -1,5 +1,5 @@
 
-version := "v27"
+version := "v28"
 
 environment_name := "capucine"
 output_path := "public/videos"
@@ -14,6 +14,7 @@ fmt-python:
     autopep8 --aggressive --recursive --in-place ./honeycomb_tools/
 
 install-dev:
+    npm install
     pip install -e .[development]
 
 _build-docker-service:

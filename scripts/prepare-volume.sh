@@ -6,7 +6,7 @@ if [ ! -z "${REWRITE}"  ] && [ "${REWRITE}" = "true" ]; then
 fi
 
 if [ ! -z "${APPEND}"  ] && [ "${APPEND}" = "true" ]; then
-    rewrite_append+=" --append"
+    rewrite_append="${rewrite_append} --append"
 fi
 
 python -m honeycomb_tools prepare-videos-for-environment-for-time-range \
