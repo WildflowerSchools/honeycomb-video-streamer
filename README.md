@@ -21,6 +21,6 @@
 Fill out `.docker.env`, then run:
 
 ```
-version=XX just _build-docker-service
+just version=vXX _build-docker-service
 docker run --rm -p 8000:8000 --volume "/$(pwd)/public/videos:/app/public/videos" --env-file ./.docker.env wildflowerschools/honeycomb-video-streamer:vXX
 ```
