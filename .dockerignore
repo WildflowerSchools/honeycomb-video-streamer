@@ -1,7 +1,12 @@
 node_modules/*
 public/*
+dist/*
+build/*
 data/*
 prep/*
+ignore/*
 honeycomb_video_streamer.egg-info/*
-.env
 .git/*
+.idea/*
+.eggs/*
+.env

@@ -4,7 +4,7 @@ import shutil
 
 import ffmpeg
 
-from honeycomb_tools.stream_reader import NonBlockingStreamReader, StreamTimeout
+from .stream_reader import NonBlockingStreamReader, StreamTimeout
 
 
 def is_valid_video(video_path):
@@ -164,21 +164,25 @@ def prepare_hls(input_path, output_path, hls_time=10,
             os.remove(output_path)
             hls_exists = False
 
+    hls_options = dict(
+        format="hls",
+        hls_time=10,
+        hls_list_size=0,
+        # hls_segment_type="fmp4", # This should work better on Safari, but instead causes Safari to crash in < 20 seconds
+        # movflags="+frag_keyframe",
+        c="copy"
+    )
     if not hls_exists:
         # ffmpeg -i ./public/videos/test/cc-1/output-small.mp4 -profile:v
         # baseline -level 3.0 -s 640x360 -start_number 0 -hls_time 10
         # -hls_list_size 0 -f hls public/videos/output.m3u8
         ffmpeg.input(input_path).output(output_path,
-                                        format="hls",
-                                        hls_list_size=0,
-                                        c="copy").run()
+                                        **hls_options).run()
     else:
         if append:
             ffmpeg.input(input_path).output(output_path,
-                                            format="hls",
-                                            hls_list_size=0,
-                                            c="copy",
-                                            hls_flags="append_list").run()
+                                            hls_flags="append_list",
+                                            **hls_options).run()
         else:
             logging.info(
                 "hls video '{}' already exists, and append mode set to 'False'".format(output_path))
