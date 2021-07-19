@@ -1,3 +1,4 @@
+const fs = require("fs");
 const express = require("express")
 const cors = require("cors")
 const path = require("path")
@@ -54,19 +55,48 @@ function jsonContentHeaders(req, res, next) {
   next()
 }
 
+function loadIndex() {
+    return JSON.parse(fs.readFileSync((process.env.ENVIRONMENT === "production") ? "./public/videos/index.json":"./src/public/videos/index.json"))
+}
+
+function getAdjustedIndex(userId) {
+  let vids = loadIndex();
+  if(!vids.global_allow.find(uid => uid === userId)) {
+    let allowed = vids.classrooms.filter(classroom => classroom.allow.find(uid => uid === userId));
+    vids.classrooms = allowed;
+  }
+  delete vids.global_allow
+  for(let i in vids.classrooms) {
+    delete vids.classrooms[i].allow;
+  }
+  return vids;
+}
+
+function canAccessClassroom(userId, classroom) {
+    let vids = getAdjustedIndex(userId);
+    if(vids.classrooms.find(clsrm => classroom === clsrm.id)) {
+      return true;
+    }
+    return false;
+}
+
 function handleVideoIndex(req, res) {
   const { classroom, date } = req.query
 
   const qDate = new Date(date)
 
   if (classroom === undefined) {
-    res.sendFile("videos/index.json", {
-      root: PUBLIC_PATH
-    })
+    let vids = getAdjustedIndex(req.userId);
+    res.json(vids)
+
   } else if (date === undefined) {
-    res.sendFile(`videos/${classroom}/index.json`, {
-      root: PUBLIC_PATH
-    })
+    if(canAccessClassroom(req.userId, classroom)) {
+      res.sendFile(`videos/${classroom}/index.json`, {
+        root: PUBLIC_PATH
+      })
+    } else {
+      res.json({error: "access-denied"});
+    }
   } else if (isNaN(qDate.getTime())) {
     return res.json({ error: "date invalid" })
   } else {

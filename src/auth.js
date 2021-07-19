@@ -38,8 +38,6 @@ const authConfig = {
   callbackURL: process.env.AUTH0_CALLBACK_URL
 }
 
-console.log(authConfig.callbackURL)
-
 const sessionStrategy = new Auth0Strategy(
   {
     domain: authConfig.domain,
@@ -47,7 +45,7 @@ const sessionStrategy = new Auth0Strategy(
     clientSecret: authConfig.clientSecret,
     callbackURL: authConfig.callbackURL
   },
-  function(accessToken, refreshToken, extraParams, profile, done) {
+  function(req, accessToken, refreshToken, extraParams, profile, done) {
     /**
      * Access tokens are used to authorize users to an API
      * (resource server)
@@ -90,7 +88,6 @@ const jwtStrategy = new JwtStrategy(
     if (jwt_payload && jwt_payload.sub) {
       return next(null, jwt_payload)
     }
-
     return next(null, false)
   }
 )
@@ -159,10 +156,14 @@ exports.apply = function(app) {
   app.use("/", router)
 
   passport.serializeUser((user, done) => {
+    console.log("========= serializeUser ======")
+    console.log(user)
     done(null, user)
   })
 
   passport.deserializeUser((user, done) => {
+    console.log("========= deserializeUser ======")
+    console.log(user)
     done(null, user)
   })
 }
@@ -176,6 +177,7 @@ exports.securedSession = (req, res, next) => {
 }
 
 exports.securedSessionOrJWT = (req, res, next) => {
+  console.log("===== securedSessionOrJWT")
   if (req.user) {
     return next()
   }
@@ -186,6 +188,7 @@ exports.securedSessionOrJWT = (req, res, next) => {
     }
 
     if (user) {
+      req.userId = user.sub.startsWith("google-apps|") ? user.sub.substring(12) : user.sub;
       return next(null, user)
     } else {
       return res.status(401).json({ error: "could not authenticate" })
