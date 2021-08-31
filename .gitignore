@@ -18,3 +18,7 @@ venv/
 .docker.env
 .eggs
 .python-version
+
+.env
+
+multiview_stream_service/__pycache__/

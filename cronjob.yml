@@ -2,7 +2,7 @@ apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   namespace: honeycomb
-  name: honeycomb-video-streamer-prepare-cronjob-2021-05-03
+  name: honeycomb-video-streamer-prepare-cronjob-2021-05-28
 spec:
   schedule: "*/10 * * * *"
   concurrencyPolicy: Forbid
@@ -14,7 +14,7 @@ spec:
             iam.amazonaws.com/role: honeycomb-role
         spec:
           containers:
-            - name: honeycomb-video-streamer-prepare-cronjob-2021-05-03
+            - name: honeycomb-video-streamer-prepare-cronjob-2021-05-28
               imagePullPolicy: Always
               image: wildflowerschools/honeycomb-video-streamer:prepare-v27
               resources:
@@ -29,11 +29,11 @@ spec:
                 - name: ENVIRONMENT_NAME
                   value: greenbrier
                 - name: OUTPUT_NAME
-                  value: 2021-05-03
+                  value: 2021-05-28
                 - name: START_TIME
-                  value: 2021-05-03T12:30
+                  value: 2021-05-28T13:00
                 - name: END_TIME
-                  value: 2021-05-03T21:30
+                  value: 2021-05-28T23:00
                 - name: APPEND
                   value: "true"
               volumeMounts:

@@ -4,20 +4,23 @@ from setuptools import setup, find_packages
 
 
 BASEDIR = os.path.dirname(os.path.abspath(__file__))
-VERSION = json.load(open(os.path.join(BASEDIR, 'package.json'))).get("version")
+VERSION = os.environ.get("VERSION")
+
+print(VERSION)
 
 BASE_DEPENDENCIES = [
-    'click>=7.0',
-    'python-dotenv>=0.10.3',
+    'click>=8.0',
+    'python-dotenv>=0.19.0',
     'wildflower-honeycomb-sdk>=0.7.3',
-    'boto3>=1.10.0',
+    'boto3>=1.18.0',
     'ffmpeg-python==0.2.0',
-    'numpy>=1.19.5',
-    'pandas>=1.2.0'
+    'numpy>=1.21',
+    'pandas>=1.3.0',
 ]
 
 DEVELOPMENT_DEPENDENCIES = [
-    'autopep8>=1.5.5'
+    'autopep8>=1.5',
+    'pylint>=2.10.2',
 ]
 
 # allow setup.py to be run from any path
@@ -30,7 +33,7 @@ setup(
     version=VERSION,
     include_package_data=True,
     description='Python tools to prepare videos for streaming from honeycomb',
-    long_description=open('honeycomb_tools/README.md').read(),
+    long_description='',
     url='https://github.com/WildflowerSchools/honeycomb-video-streamer',
     author='Paul DeCoursey',
     author_email='paul.decoursey@wildflowerschools.org',

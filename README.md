@@ -16,7 +16,7 @@
         --end 2021-05-03T21:00
         --append
 
-### Run the node server:
+### Run the python server:
 
 Fill out `.docker.env`, then run:
 
