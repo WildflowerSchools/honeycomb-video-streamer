@@ -1,17 +1,17 @@
+version := "v36"
 
-version := "v29"
-
-environment_name := "capucine"
+environment_name := "greenbrier"
 output_path := "public/videos"
-output_name := "2020-02-24"
-start := "2020-02-24T13:00"
-end := "2020-02-24T13:01"
+output_name := "2021-05-28"
+start := "2021-05-28T13:00"
+end := "2021-05-28T17:00"
 
 system-info:
     @echo "system info: {{ os() }} ({{ os_family() }}) on {{arch()}}".
 
 fmt-python:
     autopep8 --aggressive --recursive --in-place ./honeycomb_tools/
+    autopep8 --aggressive --recursive --in-place ./multiview_stream_service/
 
 install-dev:
     npm install
@@ -36,3 +36,13 @@ prepare-videos:
 
 list-datapoints:
     @python -m honeycomb_tools list-datapoints-for-environment-for-time-range  --environment_name {{environment_name}} --output_path ./ --output_name datapoints.csv --start {{start}} --end {{end}}
+
+lint-app:
+    @pylint multiview_stream_service
+
+start-app: lint-app
+    @uvicorn multiview_stream_service:app --reload
+
+
+start-postgres:
+    @docker run -it -p 5432:5432 -e POSTGRES_PASSWORD=mysecretpassword -e POSTGRES_DB=multiview -e POSTGRES_USER=pollu postgres

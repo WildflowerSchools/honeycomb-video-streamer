@@ -102,8 +102,14 @@ def list_datapoints_for_environment_for_time_range(
         output_fp.flush()
 
 
-def vts(index):
-    return f"{(int(int(index/6)/60)):02}:{int(index/6) % 60:02}:{(index % 6) * 10:02}.000"
+def vts(frames):
+    total_seconds = frames // 10
+    fractional = frames % 10
+    total_minutes = total_seconds // 60
+    hours = total_minutes // 60
+    minutes = total_minutes - (hours * 60)
+    seconds = total_seconds - (total_minutes * 60)
+    return f"{hours:02}:{minutes:02}:{seconds:02}.{fractional}00"
 
 
 @main.command()
@@ -301,16 +307,18 @@ def prepare_videos_for_environment_for_time_range(
                         file['end'])
 
                 num_frames = count_frames(line)
-                if num_frames < 100:
+                if num_frames < 100 and num_frames > 97:
                     pad_video(line, line, frames=(100 - num_frames))
-                elif num_frames > 100:
+                    num_frames == 100
+                if num_frames == 101:
                     trim_video(line, line)
+                    num_frames == 100
 
                 fp.write(f"file \'file:{camera_specific_directory}/")
                 fp.write(file_name)
                 fp.write(
-                    f"\' duration 00:00:10.000 inpoint {vts(count)} outpoint {vts(count + 1)}\n")
-                count += 1
+                    f"\' duration 00:00:{util.format_frames(num_frames)} inpoint {vts(count)} outpoint {vts(count + num_frames)}\n")
+                count += num_frames
             fp.flush()
 
         if len(current_video_history['files']) > 0:

@@ -29,3 +29,9 @@ def date_to_video_history_format(date):
 def create_dir(dir_path):
     directory = os.path.dirname(dir_path)
     os.makedirs(directory, exist_ok=True)
+
+
+def format_frames(count):
+    full = count // 10
+    part = count % 10
+    return f"{full:02}.{part}00"
