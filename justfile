@@ -1,5 +1,4 @@
-
-version := "v32"
+version := "v36"
 
 environment_name := "greenbrier"
 output_path := "public/videos"

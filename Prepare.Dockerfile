@@ -111,7 +111,6 @@ RUN mkdir -p /app
 RUN mkdir -p /app/honeycomb_tools
 
 COPY setup.py /app
-COPY package.json /app
 COPY honeycomb_tools/README.md /app/honeycomb_tools
 
 WORKDIR /app
