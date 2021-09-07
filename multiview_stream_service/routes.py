@@ -1,9 +1,9 @@
 import os
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request, HTTPException
 from fastapi.responses import FileResponse
 
-from wf_fastapi_auth0 import verify_token, get_profile, can_access_classroom
+from wf_fastapi_auth0 import verify_token, get_profile
 from .models import ClassroomList, ClassroomResponse, PlaysetResponse
 
 from .database import get_allowed_classrooms, get_classroom, get_playset, classroom_allowed
