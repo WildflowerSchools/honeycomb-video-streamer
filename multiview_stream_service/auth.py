@@ -23,6 +23,7 @@ CLIENT_SECRET = os.environ.get("AUTH0_CLIENT_SECRET")
 class AuthError(HTTPException):
     pass
 
+
 @ttl_cache(ttl=60 * 60 * 4)
 def admin_token():
     get_token = GetToken(AUTH0_DOMAIN)
@@ -31,7 +32,7 @@ def admin_token():
     return api_token
 
 
-async def verify_token(authorization = Depends(HTTPBearer())):
+async def verify_token(authorization=Depends(HTTPBearer())):
     token = authorization.credentials
     unverified_header = jwt.get_unverified_header(token)
     rsa_key = load_rsa_key(unverified_header["kid"])
@@ -63,7 +64,7 @@ async def get_profile(authorization: str = Depends(HTTPBearer())):
     raise HTTPException(status_code=401, detail="user_token_required")
 
 
-async def can_access_classroom(request: Request, profile:str=Depends(get_profile)):
+async def can_access_classroom(request: Request, profile: str = Depends(get_profile)):
     classroom_id = request.path_params.get("classroom_id")
     if classroom_id:
         return classroom_allowed(classroom_id, profile.get("primaryEmail"))
