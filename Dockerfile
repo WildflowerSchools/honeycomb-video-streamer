@@ -16,4 +16,4 @@ COPY setup.py /app/setup.py
 
 RUN pip install -e .
 
-CMD uvicorn --host 0.0.0.0 multiview_stream_service:app
+CMD python -m multiview_stream_service

@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+
+  postgres:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_DB: honeycomb-video-streamer
+      POSTGRES_PASSWORD: iamaninsecurepassword
+    ports:
+      - 5433:5432
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8080:8080
+
+  streamer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - postgres
+    ports:
+      - 8000:8000
+    volumes:
+      - "./public/videos:/app/public/videos"
+    env_file:
+      - "./.docker.env"
