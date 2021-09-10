@@ -114,7 +114,7 @@ COPY setup.py /app
 COPY honeycomb_tools/README.md /app/honeycomb_tools
 
 WORKDIR /app
-RUN pip install -e .
+RUN pip install -v -e .
 
 COPY honeycomb_tools/*.py /app/honeycomb_tools/
 COPY honeycomb_tools/assets/ /app/honeycomb_tools/assets

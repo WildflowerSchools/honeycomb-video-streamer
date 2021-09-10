@@ -11,3 +11,4 @@ honeycomb_video_streamer.egg-info/*
 .idea/*
 .eggs/*
 .env
+.docker.env

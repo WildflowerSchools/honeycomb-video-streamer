@@ -14,6 +14,6 @@ WORKDIR /app
 COPY multiview_stream_service/ /app/multiview_stream_service/
 COPY setup.py /app/setup.py
 
-RUN pip install -e .
+RUN pip install -v -e .
 
 CMD python -m multiview_stream_service
