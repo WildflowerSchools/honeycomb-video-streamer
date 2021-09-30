@@ -2,9 +2,10 @@ import os
 
 from cachetools.func import ttl_cache
 from sqlalchemy import create_engine, select
-from sqlalchemy import MetaData, Column, Table, String, ForeignKey, UniqueConstraint, Date, Time
+from sqlalchemy import MetaData, Column, Table, String, ForeignKey, Date, Time
 from sqlalchemy.dialects.postgresql import UUID
 from fastapi import HTTPException
+from wf_fastapi_auth0.wf_permissions import check_requests, AuthRequest
 
 from .models import ClassroomList, Classroom, ClassroomResponse, Playset, PlaysetResponse, Video
 
@@ -16,23 +17,6 @@ classrooms = Table('classroom', metadata,
                    Column('id', UUID(), primary_key=True),
                    Column('name', String(16), nullable=False),
                    )
-
-global_allows = Table('global_allow', metadata,
-                      Column('id', UUID(), primary_key=True),
-                      Column('email', String(128), nullable=False),
-                      )
-
-classroom_allows = Table('classroom_allow', metadata,
-                         Column('classroom_id', UUID(), ForeignKey("classroom.id"), nullable=False),
-                         Column('email', String(128), nullable=False),
-                         UniqueConstraint('classroom_id', 'email', name='classroom_allow_unique'),
-                         )
-
-classroom_owners = Table('classroom_owner', metadata,
-                         Column('classroom_id', UUID(), ForeignKey("classroom.id"), nullable=False),
-                         Column('email', String(128), nullable=False),
-                         UniqueConstraint('classroom_id', 'email', name='classroom_owner_unique'),
-                         )
 
 videos = Table('video', metadata,
                Column('id', UUID(), primary_key=True, nullable=False),
@@ -57,63 +41,24 @@ playsets = Table('playset', metadata,
 metadata.create_all(engine)
 
 
-@ttl_cache(300)
-def is_global_user(user_email):
-    conn = engine.connect()
-    s = select(global_allows).where(global_allows.c.email == user_email)
-    results = conn.execute(s)
-    return results is not None
-
-
-def get_allowed_classrooms(user_email):
+async def get_allowed_classrooms(subject):
     conn = engine.connect()
     result = ClassroomList()
+    all_classrooms = []
     result.classrooms = []
     s = select(classrooms.c.id, classrooms.c.name)
-    if not is_global_user(user_email):
-        own = [
-            row.classroom_id for row in conn.execute(
-                classroom_owners.select().where(
-                    classroom_owners.c.email == user_email))]
-        allowed = [
-            row.classroom_id for row in conn.execute(
-                classroom_allows.select().where(
-                    classroom_allows.c.email == user_email))]
-        s = s.where(classrooms.c.id.in_(own + allowed))
     results = conn.execute(s)
     for row in results:
         c = Classroom(**row)
-        c.owners = [
-            row.email for row in conn.execute(
-                classroom_owners.select().where(
-                    classroom_owners.c.classroom_id == str(
-                        c.id)))]
-        c.allows = [
-            row.email for row in conn.execute(
-                classroom_allows.select().where(
-                    classroom_allows.c.classroom_id == str(
-                        c.id)))]
-        result.classrooms.append(c)
+        all_classrooms.append(c)
+    perm_check = await check_requests([AuthRequest(sub=subject[0], dom=subject[1], obj=f"{c.id}:videos", act="read") for c in all_classrooms])
+    for i, c in enumerate(perm_check):
+        if c["allow"]:
+            result.classrooms.append(all_classrooms[i])
     return result
 
 
-def classroom_allowed(classroom_id, user_email):
-    conn = engine.connect()
-    if not is_global_user(user_email):
-        own = conn.execute(
-            select(classroom_owners).where(
-                classroom_owners.c.email == user_email,
-                classroom_owners.classroom_id == classroom_id))
-        if own is None:
-            allow = conn.execute(
-                select(classroom_allows).where(
-                    classroom_allows.c.email == user_email,
-                    classroom_allows.classroom_id == classroom_id))
-            if allow is None:
-                raise HTTPException(status_code=401, detail="unauthorized")
-    return True
-
-
+@ttl_cache(300)
 def get_classroom(classroom_id):
     conn = engine.connect()
     classroom = conn.execute(select(classrooms).where(classrooms.c.id == classroom_id))
@@ -127,6 +72,7 @@ def get_classroom(classroom_id):
     return response
 
 
+@ttl_cache(300)
 def get_playset(classroom_id, playset_date):
     conn = engine.connect()
     playset = conn.execute(

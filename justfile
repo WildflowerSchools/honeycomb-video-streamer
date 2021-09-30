@@ -41,7 +41,7 @@ lint-app:
     @pylint multiview_stream_service
 
 start-app: lint-app
-    @uvicorn multiview_stream_service:app --reload
+    @uvicorn multiview_stream_service:app --reload  --port 8005
 
 
 start-postgres:

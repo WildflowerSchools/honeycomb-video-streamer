@@ -2,14 +2,12 @@ import datetime
 from typing import Optional, List
 from uuid import UUID, uuid4
 
-from pydantic import Field, BaseModel, EmailStr
+from pydantic import Field, BaseModel
 
 
 class Classroom(BaseModel):
     id: UUID = Field(default_factory=uuid4)
     name: str
-    allows: Optional[List[EmailStr]] = []
-    owners: Optional[List[EmailStr]] = []
 
 
 class ClassroomList(BaseModel):
