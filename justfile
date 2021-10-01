@@ -26,7 +26,7 @@ _build-docker-prepare:
 build-docker: _build-docker-service _build-docker-prepare
 
 docker-push: build-docker
-    @docker push wildflowerschools/honeycomb-video-streamer:{{version}}
+    @docker push wildflowerschools/honeycomb-video-streamer:app-{{version}}
     @docker push wildflowerschools/honeycomb-video-streamer:prepare-{{version}}
 
 

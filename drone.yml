@@ -12,7 +12,7 @@ steps:
   environment:
     DRONE: "true"
   commands:
-  - echo -n v$DRONE_BUILD_NUMBER > .tags
+  - echo -n app-v$DRONE_BUILD_NUMBER > .tags
   - cat .tags
 - name: docker
   image: plugins/docker
