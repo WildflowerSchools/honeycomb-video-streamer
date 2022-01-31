@@ -84,7 +84,7 @@ def prepare_videos_for_environment_for_day(
               help='start time of video to load expects format to be YYYY-MM-DDTHH:MM', required=True)
 @click.option('--end', help='end time of video to load expects format to be YYYY-MM-DDTHH:MM', required=True)
 def list_datapoints_for_environment_for_time_range(
-        ctx, environment_name, output_path, output_name, start, end):
+        ctx, environment_name, output_path, output_name, start, end, cameras):
     honeycomb_client = ctx.obj['honeycomb_client']
     # load the environment to get all the assignments
     environment_id = get_environment_id(honeycomb_client, environment_name)
@@ -126,8 +126,9 @@ def vts(frames):
 @click.option('--rewrite', help='rewrite any generated images/video (i.e. hls feeds) (already downloaded raw videos are not destroyed or re-downloaded)', is_flag=True, default=False)
 @click.option('--append', help='append images/video to HLS feed (start time for given day must align)',
               is_flag=True, default=False)
+@click.option('--camera', "-c", help='list of cameras to generate video for (ids/names)', required=False, multiple=True, default=[])
 def prepare_videos_for_environment_for_time_range(
-        ctx, environment_name, output_path, output_name, start, end, rewrite, append):
+        ctx, environment_name, output_path, output_name, start, end, rewrite, append, camera):
     if rewrite:
         logging.warning(
             "Rewrite flag enabled! All generated images/video will be recreated.")
@@ -167,6 +168,11 @@ def prepare_videos_for_environment_for_time_range(
     # evaluate the assignments to filter out non-camera assignments
     assignments = get_assignments(honeycomb_client, environment_id)
     for idx, (assignment_id, assignment_name) in enumerate(assignments):
+        if len(camera) > 0:
+            if assignment_id not in camera and assignment_name not in camera:
+                logging.info("Skipping camera '{}:{}', not in supplied cameras param".format(assignment_id, assignment_name))
+                continue
+
         rewrite_current = rewrite
         datapoints = list(
             get_datapoint_keys_for_assignment_in_range(
