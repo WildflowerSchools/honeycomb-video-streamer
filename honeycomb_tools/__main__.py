@@ -83,8 +83,9 @@ def prepare_videos_for_environment_for_day(
 @click.option('--start',
               help='start time of video to load expects format to be YYYY-MM-DDTHH:MM', required=True)
 @click.option('--end', help='end time of video to load expects format to be YYYY-MM-DDTHH:MM', required=True)
+@click.option('--camera', "-c", help='list of cameras to generate video for (ids/names)', required=False, multiple=True, default=[])
 def list_datapoints_for_environment_for_time_range(
-        ctx, environment_name, output_path, output_name, start, end, cameras):
+        ctx, environment_name, output_path, output_name, start, end, camera):
     honeycomb_client = ctx.obj['honeycomb_client']
     # load the environment to get all the assignments
     environment_id = get_environment_id(honeycomb_client, environment_name)
@@ -93,6 +94,11 @@ def list_datapoints_for_environment_for_time_range(
         # evaluate the assignments to filter out non-camera assignments
         assignments = get_assignments(honeycomb_client, environment_id)
         for assignment_id, assignment_name in assignments:
+            if len(camera) > 0:
+                if assignment_id not in camera and assignment_name not in camera:
+                    logging.info("Skipping camera '{}:{}', not in supplied cameras param".format(assignment_id, assignment_name))
+                    continue
+
             datapoints = list(
                 get_datapoint_keys_for_assignment_in_range(
                     honeycomb_client, assignment_id, start, end))
