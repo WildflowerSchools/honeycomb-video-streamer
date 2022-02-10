@@ -1,6 +1,6 @@
 import logging
 import os
-from multiprocessing import Pool
+from multiprocessing import Pool, cpu_count
 
 import boto3
 
@@ -71,7 +71,7 @@ class Manifest(object):
             logging.info("%s exists", output)
         return (True, None)
 
-    def execute(self, empty_clip_path, rewrite=False):
+    def execute(self, empty_clip_path, rewrite=False, processes=None):
         last_available_video_end_time = None
         if self.rtrim:
             last_available_video_end_time = self.get_last_valid_clip_end_time()
@@ -84,5 +84,9 @@ class Manifest(object):
                 copy_technical_difficulties_clip(
                     empty_clip_path, output_path, rewrite)
 
-        pool = Pool(processes=6)
+        n_processes = processes
+        if processes is None:
+            n_cpus = cpu_count()
+            n_processes = n_cpus - 1
+        pool = Pool(processes=n_processes)
         return pool.map(self.download_file, self.remote_video_list)
