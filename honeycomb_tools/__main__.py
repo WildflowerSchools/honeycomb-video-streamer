@@ -4,12 +4,13 @@ import json
 import logging
 import os
 import os.path
+import pytz
 
 import click
 from dotenv import load_dotenv
 import honeycomb
 
-from .introspection import get_assignments, get_datapoint_keys_for_assignment_in_range, process_assignment_datapoints_for_download, get_environment_id
+from .introspection import get_assignments, fetch_video_metadata_in_range, process_video_metadata_for_download, get_environment_id
 from .transcode import concat_videos, count_frames, get_duration, generate_preview_image, pad_video, prepare_hls, trim_video
 from .manifest import Manifest
 from .manifestations import add_classroom, add_date_to_classroom
@@ -30,6 +31,16 @@ HONEYCOMB_AUDIENCE = os.getenv(
     "https://honeycomb.api.wildflowerschools.org")
 HONEYCOMB_CLIENT_ID = os.getenv("HONEYCOMB_CLIENT_ID")
 HONEYCOMB_CLIENT_SECRET = os.getenv("HONEYCOMB_CLIENT_SECRET")
+
+cli_valid_date_formats = list(itertools.chain.from_iterable(
+    map(lambda d: ["{}".format(d), "{}%z".format(d), "{} %z".format(d), "{} %Z".format(d)], ['%Y-%m-%dT%H:%M', '%Y-%m-%d %H:%M'])))
+
+
+def cli_timezone_aware(ctx, param, value):
+    if value.tzinfo is None:
+        return value.replace(tzinfo=pytz.UTC)
+    else:
+        return value.astimezone(pytz.utc)
 
 
 @click.group()
@@ -64,8 +75,6 @@ def main(ctx):
 def prepare_videos_for_environment_for_day(
         ctx, environment_name, output_path, output_name, day):
     datetime_of_day = util.date_to_day_format(day)
-    # prepare list of datapoints for each assignment for the time period
-    # selected
     start = (datetime_of_day + timedelta(hours=13)).isoformat()
     end = (datetime_of_day + timedelta(hours=22)).isoformat()
     prepare_videos_for_environment_for_time_range(
@@ -80,31 +89,38 @@ def prepare_videos_for_environment_for_day(
               help='path to output prepared videos to', required=True)
 @click.option('--output_name', "-n",
               help='name to give the output video', required=True)
-@click.option('--start',
-              help='start time of video to load expects format to be YYYY-MM-DDTHH:MM', required=True)
-@click.option('--end', help='end time of video to load expects format to be YYYY-MM-DDTHH:MM', required=True)
-@click.option('--camera', "-c", help='list of cameras to generate video for (ids/names)', required=False, multiple=True, default=[])
-def list_datapoints_for_environment_for_time_range(
+@click.option("--start", type=click.DateTime(formats=cli_valid_date_formats), required=True,
+              callback=cli_timezone_aware, help='start time of video to load expects format to be YYYY-MM-DDTHH:MM Z')
+@click.option('--end', type=click.DateTime(formats=cli_valid_date_formats), required=True,
+              callback=cli_timezone_aware, help='end time of video to load expects format to be YYYY-MM-DDTHH:MM Z')
+@click.option('--camera', "-c", help='list of cameras to generate video for (ids/names)',
+              required=False, multiple=True, default=[])
+def list_videos_for_environment_for_time_range(
         ctx, environment_name, output_path, output_name, start, end, camera):
     honeycomb_client = ctx.obj['honeycomb_client']
     # load the environment to get all the assignments
     environment_id = get_environment_id(honeycomb_client, environment_name)
     with open(f"{output_path}/{output_name}", 'w') as output_fp:
-        output_fp.write(f"assignment_id,timestamp,data_id,key\n")
+        output_fp.write(f"assignment_id,device_id,assigned_name,timestamp,data_id\n")
         # evaluate the assignments to filter out non-camera assignments
         assignments = get_assignments(honeycomb_client, environment_id)
-        for assignment_id, assignment_name in assignments:
+        for assignment_id, device_id, assigned_name in assignments:
             if len(camera) > 0:
-                if assignment_id not in camera and assignment_name not in camera:
-                    logging.info("Skipping camera '{}:{}', not in supplied cameras param".format(assignment_id, assignment_name))
+                if assignment_id not in camera and assigned_name not in camera:
+                    logging.info(
+                        "Skipping camera '{}:{}', not in supplied cameras param".format(
+                            assignment_id, assigned_name))
                     continue
 
-            datapoints = list(
-                get_datapoint_keys_for_assignment_in_range(
-                    honeycomb_client, assignment_id, start, end))
-            for item in datapoints:
+            video_metadata = list(
+                fetch_video_metadata_in_range(
+                    environment_id=environment_id,
+                    device_id=device_id,
+                    start=start,
+                    end=end))
+            for item in video_metadata:
                 output_fp.write(
-                    f"{assignment_id},{item['timestamp']},{item['data_id']},{item['file']['key']}\n")
+                    f"{assignment_id},{device_id},{assigned_name},{item['video_timestamp']},{item['data_id']}\n")
         output_fp.flush()
 
 
@@ -126,15 +142,18 @@ def vts(frames):
               help='path to output prepared videos to', required=True)
 @click.option('--output_name', "-n",
               help='name to give the output video', required=True)
-@click.option('--start',
-              help='start time of video to load expects format to be YYYY-MM-DDTHH:MM', required=True)
-@click.option('--end', help='end time of video to load expects format to be YYYY-MM-DDTHH:MM', required=True)
+@click.option("--start", type=click.DateTime(formats=cli_valid_date_formats), required=True,
+              callback=cli_timezone_aware, help='start time of video to load expects format to be YYYY-MM-DDTHH:MM Z')
+@click.option('--end', type=click.DateTime(formats=cli_valid_date_formats), required=True,
+              callback=cli_timezone_aware, help='end time of video to load expects format to be YYYY-MM-DDTHH:MM Z')
 @click.option('--rewrite', help='rewrite any generated images/video (i.e. hls feeds) (already downloaded raw videos are not destroyed or re-downloaded)', is_flag=True, default=False)
 @click.option('--append', help='append images/video to HLS feed (start time for given day must align)',
               is_flag=True, default=False)
-@click.option('--camera', "-c", help='list of cameras to generate video for (ids/names)', required=False, multiple=True, default=[])
+@click.option('--camera', "-c", help='list of cameras to generate video for (ids/names)',
+              required=False, multiple=True, default=[])
+@click.option('--hls/--no-hls', 'generate_hls', help='turn on/off hls generation', required=False, default=True)
 def prepare_videos_for_environment_for_time_range(
-        ctx, environment_name, output_path, output_name, start, end, rewrite, append, camera):
+        ctx, environment_name, output_path, output_name, start, end, rewrite, append, camera, generate_hls):
     if rewrite:
         logging.warning(
             "Rewrite flag enabled! All generated images/video will be recreated.")
@@ -173,35 +192,44 @@ def prepare_videos_for_environment_for_time_range(
 
     # evaluate the assignments to filter out non-camera assignments
     assignments = get_assignments(honeycomb_client, environment_id)
-    for idx, (assignment_id, assignment_name) in enumerate(assignments):
+    for idx, (assignment_id, device_id, assigned_name) in enumerate(assignments):
         if len(camera) > 0:
-            if assignment_id not in camera and assignment_name not in camera:
-                logging.info("Skipping camera '{}:{}', not in supplied cameras param".format(assignment_id, assignment_name))
+            if assignment_id not in camera and device_id not in camera and assigned_name not in camera:
+                logging.info("Skipping camera '{}:{}', not in supplied cameras param".format(device_id, assigned_name))
                 continue
 
+        camera_specific_directory = os.path.join(
+            output_path, environment_id, output_name, assigned_name)
+        os.makedirs(camera_specific_directory, exist_ok=True)
+
         rewrite_current = rewrite
-        datapoints = list(
-            get_datapoint_keys_for_assignment_in_range(
-                honeycomb_client, assignment_id, start, end))
+        logging.info("Fetching video metadata for camera '{}:{}' - {} (start) - {} (end)".format(device_id,
+                     assigned_name, start, end))
+        video_metadata = list(
+            fetch_video_metadata_in_range(
+                environment_id=environment_id,
+                device_id=device_id,
+                start=start,
+                end=end))
 
         logging.info(
             "%s has %i in %s=%s",
-            assignment_name,
-            len(datapoints),
+            assigned_name,
+            len(video_metadata),
             start,
             end)
-        if len(datapoints) == 0:
+        if len(video_metadata) == 0:
             logging.warning(
                 "No videos for assignment: '{}':{}".format(
-                    assignment_id, assignment_name))
+                    assignment_id, assigned_name))
 
         # fetch all of the videos for each camera, records are returned ordered by timestamp
         # missing clips are stored behind the "missing" attribute
-        manifest = process_assignment_datapoints_for_download(target=f"{output_path}/{environment_id}/{output_name}/{assignment_name}/",
-                                                              datapoints=datapoints,
-                                                              start=start,
-                                                              end=end,
-                                                              manifest=Manifest(rtrim=True))
+        # target=f"{output_path}/{environment_id}/{output_name}/{assigned_name}/",
+        manifest = process_video_metadata_for_download(video_metadata=video_metadata,
+                                                       start=start,
+                                                       end=end,
+                                                       manifest=Manifest(output_directory=camera_specific_directory))
         if len(manifest.get_files()) == 0:
             continue
 
@@ -209,8 +237,6 @@ def prepare_videos_for_environment_for_time_range(
             empty_clip_path=const.empty_clip_path(output_path),
             rewrite=rewrite_current)
 
-        camera_specific_directory = os.path.join(
-            output_path, environment_id, output_name, assignment_name)
         hls_out = os.path.join(camera_specific_directory, "output.m3u8")
         hls_thumb_out = os.path.join(
             camera_specific_directory,
@@ -251,7 +277,7 @@ def prepare_videos_for_environment_for_time_range(
                         camera_start_time):
                     logger.error(
                         "Unexpected start_time for camera '{}': {} != {}. Recreating HLS stream...".format(
-                            assignment_name, camera_start_time, index_manifest['start']))
+                            assigned_name, camera_start_time, index_manifest['start']))
                     camera_video_history = []
                     rewrite_current = True
                 else:
@@ -262,7 +288,7 @@ def prepare_videos_for_environment_for_time_range(
                     if actual_duration != expected_duration:
                         logger.error(
                             "Unexpected duration for camera '{}': {} != {}. Recreating HLS stream...".format(
-                                assignment_name, expected_duration, actual_duration))
+                                assigned_name, expected_duration, actual_duration))
                         camera_video_history = []
                         rewrite_current = True
 
@@ -302,8 +328,8 @@ def prepare_videos_for_environment_for_time_range(
         with open(current_input_files_path, 'w') as fp:
             count = 0
             for file in sorted(manifest.get_files(),
-                               key=lambda x: x['output']):
-                line = file['output']
+                               key=lambda x: x['video_streamer_path']):
+                line = file['video_streamer_path']
                 # Skip video files that have already been processed
                 if line in already_processed_files:
                     continue
@@ -319,7 +345,7 @@ def prepare_videos_for_environment_for_time_range(
                         file['end'])
 
                 num_frames = count_frames(line)
-                if num_frames < 100 and num_frames > 97:
+                if num_frames < 100:  # and num_frames > 97:
                     pad_video(line, line, frames=(100 - num_frames))
                     num_frames == 100
                 if num_frames == 101:
@@ -340,6 +366,11 @@ def prepare_videos_for_environment_for_time_range(
                 thumb_path=thumb_out_path,
                 rewrite=True)
 
+            if not generate_hls:
+                logger.info("Generated: {}".format(video_out_path))
+                logger.info("Skipping HLS generation")
+                continue
+
             # prepare videos for HLS streaming
             prepare_hls(
                 video_out_path,
@@ -359,45 +390,46 @@ def prepare_videos_for_environment_for_time_range(
             generate_preview_image(hls_out, preview_image_out)
             generate_preview_image(hls_thumb_out, preview_image_thumb_out)
 
-        current_video_meta = {
-            "device_id": assignment_id,
-            "device_name": assignment_name,
-            "url": f"/videos/{environment_id}/{output_name}/{assignment_name}/output.m3u8",
-            "preview_url": f"/videos/{environment_id}/{output_name}/{assignment_name}/output-preview.jpg",
-            "preview_thumbnail_url": f"/videos/{environment_id}/{output_name}/{assignment_name}/output-preview-small.jpg",
-        }
+        if not generate_hls:
+            current_video_meta = {
+                "device_id": device_id,
+                "device_name": assigned_name,
+                "url": f"/videos/{environment_id}/{output_name}/{assigned_name}/output.m3u8",
+                "preview_url": f"/videos/{environment_id}/{output_name}/{assigned_name}/output-preview.jpg",
+                "preview_thumbnail_url": f"/videos/{environment_id}/{output_name}/{assigned_name}/output-preview-small.jpg",
+            }
 
-        ######
-        # Update or append to the video_meta data object
-        ######
-        updated_existing_video_meta_record = False
-        for idx, meta_record in enumerate(all_video_meta):
-            if meta_record['device_id'] == assignment_id:
-                updated_existing_video_meta_record = True
-                all_video_meta[idx] = current_video_meta
-                break
+            ######
+            # Update or append to the video_meta data object
+            ######
+            updated_existing_video_meta_record = False
+            for idx, meta_record in enumerate(all_video_meta):
+                if meta_record['device_id'] == device_id:
+                    updated_existing_video_meta_record = True
+                    all_video_meta[idx] = current_video_meta
+                    break
 
-        if not updated_existing_video_meta_record:
-            all_video_meta.append(current_video_meta)
-        ######
+            if not updated_existing_video_meta_record:
+                all_video_meta.append(current_video_meta)
+            ######
 
-        with open(camera_video_history_path, 'w') as fp:
-            json.dump(camera_video_history, fp)
-            fp.flush()
+            with open(camera_video_history_path, 'w') as fp:
+                json.dump(camera_video_history, fp)
+                fp.flush()
 
-        # Add a record in the classroom's index that points to this run's video
-        # feeds
-        add_date_to_classroom(output_path, environment_id,
-                              start[:10], output_name, [start[11:], end[11:]])
+            # Add a record in the classroom's index that points to this run's video
+            # feeds
+            add_date_to_classroom(output_path, environment_id,
+                                  start[:10], output_name, [start[11:], end[11:]])
 
-        with open(manifest_path, 'w') as fp:
-            json.dump({"start": start,
-                       "end": end,
-                       "videos": all_video_meta,
-                       "building": (idx < len(assignments) - 1)
-                       }, fp)
-            fp.flush()
-            # done
+            with open(manifest_path, 'w') as fp:
+                json.dump({"start": start,
+                           "end": end,
+                           "videos": all_video_meta,
+                           "building": (idx < len(assignments) - 1)
+                           }, fp)
+                fp.flush()
+                # done
 
 
 if __name__ == '__main__':

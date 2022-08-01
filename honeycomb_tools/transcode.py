@@ -65,6 +65,11 @@ def count_frames(mp4_video_path):
     # ffprobe -v error -select_streams v:0 -show_entries stream=nb_frames -of
     # default=nokey=1:noprint_wrappers=1
     probe = ffmpeg.probe(mp4_video_path)
+    if probe is None or 'streams' not in probe:
+        err = "ffmpeg returned unexpected response reading {}".format(mp4_video_path)
+        logging.error(err)
+        raise ValueError(err)
+
     video_stream = next(
         (stream for stream in probe['streams']
          if stream['codec_type'] == 'video'),
@@ -82,13 +87,16 @@ def trim_video(input_path, output_path, duration=10):
         "Trimming video '{}' down to {} seconds".format(
             input_path, duration))
 
+    use_tmp = input_path == output_path
+    tmp_path = "{}.tmp".format(input_path)
+    ffmpeg_input_path = input_path
     try:
-        if input_path == output_path:
-            input_path = "{}.tmp".format(input_path)
-            shutil.copy(output_path, input_path)
+        if use_tmp:
+            shutil.copy(input_path, tmp_path)
+            ffmpeg_input_path = tmp_path
 
         ffmpeg.input(
-            input_path,
+            ffmpeg_input_path,
             ss=0,
             to=duration).output(
             output_path,
@@ -98,6 +106,9 @@ def trim_video(input_path, output_path, duration=10):
         logging.error("Failed trimming video {}".format(input_path))
         logging.error(e)
         return False
+    finally:
+        if use_tmp:
+            os.remove(tmp_path)
 
     return True
 
@@ -248,18 +259,21 @@ def pad_video(input_path, output_path, frames):
         "Padding video '{}' with {} frames".format(
             input_path, frames))
 
+    use_tmp = input_path == output_path
+    tmp_path = "{}.tmp".format(input_path)
+    ffmpeg_input_path = input_path
     if frames <= 0:
         logging.warning(
             "Frame padding giving to pad_video smaller than 1: {}".format(frames))
         return False
 
     try:
-        if input_path == output_path:
-            input_path = "{}.tmp".format(input_path)
-            shutil.copy(output_path, input_path)
+        if use_tmp:
+            shutil.copy(input_path, tmp_path)
+            ffmpeg_input_path = tmp_path
 
         stop_duration = frames / 10
-        ffmpeg.input(input_path).output(
+        ffmpeg.input(ffmpeg_input_path).output(
             output_path,
             filter_complex="tpad=stop_duration={}:stop_mode=clone".format(stop_duration)).overwrite_output().run()
     except ffmpeg._run.Error as e:
@@ -268,5 +282,8 @@ def pad_video(input_path, output_path, frames):
                 input_path, frames))
         logging.error(e)
         return False
+    finally:
+        if use_tmp:
+            os.remove(tmp_path)
 
     return True

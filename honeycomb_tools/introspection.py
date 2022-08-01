@@ -1,9 +1,12 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 import os
 import os.path
 import pytz
+import shutil
+import tempfile
 
 import pandas as pd
+import video_io
 
 from .manifest import Manifest
 from . import util
@@ -42,61 +45,43 @@ def get_assignments(honeycomb_client, environment_id):
         }
         """,
         {"environment_id": environment_id}).get("getEnvironment").get("assignments")
-    return [(assignment["assignment_id"], assignment["assigned"]["name"]) for assignment in assignments if assignment["assigned_type"]
+    return [(assignment["assignment_id"], assignment["assigned"]["device_id"], assignment["assigned"]["name"]) for assignment in assignments if assignment["assigned_type"]
             == "DEVICE" and assignment["assigned"]["device_type"] in ["PI3WITHCAMERA", "PI4WITHCAMERA"]]
 
 
-def get_datapoint_keys_for_assignment_in_range(
-        honeycomb_client, assignment_id, start, end):
-    query_pages = """
-        query searchDatapoints($cursor: String, $assignment_id: String, $start: String, $end: String) {
-          searchDatapoints(
-            query: { operator: AND, children: [
-                { operator: EQ, field: "source", value: $assignment_id },
-                { operator: GTE, field: "timestamp", value: $start },
-                { operator: LT, field: "timestamp", value: $end },
-            ] }
-            page: { cursor: $cursor, max: 1000, sort: {field: "timestamp", direction: DESC} }
-          ) {
-            page_info {
-              count
-              cursor
-            }
-            data {
-              data_id
-              timestamp
-              format
-              tags
-              file {
-                size
-                key
-                bucketName
-                contentType
-              }
-            }
-          }
-        }
-        """
-    cursor = ""
-    while True:
-        page = honeycomb_client.raw_query(
-            query_pages, {
-                "assignment_id": assignment_id, "start": start, "end": end, "cursor": cursor})
-        page_info = page.get("searchDatapoints").get("page_info")
-        data = page.get("searchDatapoints").get("data")
-        cursor = page_info.get("cursor")
-        if page_info.get("count") == 0:
-            break
-        for item in data:
-            yield item
+def fetch_video_metadata_in_range(
+        environment_id, device_id, start, end):
+    start_datetime = start
+    if not isinstance(start, datetime):
+        start_datetime = util.str_to_date(start)
+    end_datetime = end
+    if isinstance(end, datetime):
+        end_datetime = util.str_to_date(end)
+
+    videos = video_io.fetch_video_metadata(
+        start=start_datetime,
+        end=end_datetime,
+        environment_id=environment_id,
+        camera_device_ids=[device_id],
+    )
+
+    # for video in videos:
+    #     file_extension = os.path.splitext(video['path'])[1]
+    #     video_timestamp = video['video_timestamp'].strftime('%Y-%m-%dT%H:%M:%SZ')
+    #     new_path = os.path.join(output_path, f"{video_timestamp}_{video['data_id']}{file_extension}")
+    #
+    #     #shutil.move(video['video_local_path'], new_path)
+    #     video['video_streamer_path'] = new_path
+
+    return videos
 
 
 def clean_pd_ts(ts):
-    return ts.to_pydatetime().replace(tzinfo=None).isoformat(timespec='seconds') + 'Z'
+    return ts.to_pydatetime().astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
 
-def process_assignment_datapoints_for_download(
-        target, datapoints, start, end, manifest=Manifest()):
+def process_video_metadata_for_download(
+        video_metadata, start, end, manifest=Manifest()):
     """
     Query and fetch video clips from the datapoints endpoint. Missing clips will be added
     to the output dict's "missing" field
@@ -127,14 +112,14 @@ def process_assignment_datapoints_for_download(
         tz=pytz.UTC)
 
     # Convert datapoints to a dataframe to use pd timeseries functionality
-    df_datapoints = pd.DataFrame(datapoints)
-    if len(datapoints) > 0:
+    df_datapoints = pd.DataFrame(video_metadata)
+    if len(video_metadata) > 0:
         # Move timestamp column to datetime index
-        df_datapoints['timestamp'] = pd.to_datetime(
-            df_datapoints['timestamp'], utc=True)
+        df_datapoints['video_timestamp'] = pd.to_datetime(
+            df_datapoints['video_timestamp'], utc=True)
         df_datapoints = df_datapoints.set_index(
-            pd.DatetimeIndex(df_datapoints['timestamp']))
-        df_datapoints = df_datapoints.drop(columns=['timestamp'])
+            pd.DatetimeIndex(df_datapoints['video_timestamp']))
+        df_datapoints = df_datapoints.drop(columns=['video_timestamp'])
         # Scrub duplicates (these shouldn't exist)
         df_datapoints = df_datapoints[~df_datapoints.index.duplicated(
             keep='first')]
@@ -144,16 +129,13 @@ def process_assignment_datapoints_for_download(
     for idx_datetime, row in df_datapoints.iterrows():
         start_formatted_time = clean_pd_ts(idx_datetime)
         end_formatted_time = clean_pd_ts(idx_datetime + timedelta(seconds=10))
-        output = os.path.join(target, f"{start_formatted_time}.video.mp4")
+        # output = os.path.join(target, f"{start_formatted_time}.video.mp4")
 
         if pd.isnull(row['data_id']):
-            manifest.add_to_missing(output=output,
-                                    start=start_formatted_time,
+            manifest.add_to_missing(start=start_formatted_time,
                                     end=end_formatted_time)
         else:
-            manifest.add_to_download(bucketName=row["file"]["bucketName"],
-                                     key=row["file"]["key"],
-                                     output=output,
+            manifest.add_to_download(video_metadatum=row.to_dict(),
                                      start=start_formatted_time,
                                      end=end_formatted_time)
 

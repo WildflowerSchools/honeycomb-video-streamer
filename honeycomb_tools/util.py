@@ -6,9 +6,9 @@ import pytz
 
 def str_to_date(date_str):
     if isinstance(date_str, datetime):
-        return date_str.replace(tzinfo=pytz.UTC)
+        return date_str.astimezone(pytz.utc)
 
-    for fmt in ("%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%SZ"):
+    for fmt in ("%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%dT%H:%M:%S%zZ"):
         try:
             return datetime.strptime(date_str, fmt).replace(tzinfo=pytz.UTC)
         except ValueError:

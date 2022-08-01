@@ -14,7 +14,6 @@ fmt-python:
     autopep8 --aggressive --recursive --in-place ./multiview_stream_service/
 
 install-dev:
-    npm install
     pip install -e .[development]
 
 _build-docker-service:

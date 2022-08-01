@@ -9,6 +9,7 @@ node_modules
 
 
 public/videos/
+public/datapoints/
 data/
 prep/
 build/
