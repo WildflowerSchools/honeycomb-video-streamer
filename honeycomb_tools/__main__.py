@@ -213,7 +213,7 @@ def prepare_videos_for_environment_for_time_range(
                 end=end))
 
         logging.info(
-            "%s has %i in %s=%s",
+            "%s has %i videos between %s to %s",
             assigned_name,
             len(video_metadata),
             start,

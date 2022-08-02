@@ -16,7 +16,7 @@ BASE_DEPENDENCIES = [
     'ffmpeg-python==0.2.0',
     'numpy>=1.21',
     'pandas>=1.3.0',
-    'wf-video-io>=3.0.3'
+    'wf-video-io>=3.1.0'
 ]
 
 DEVELOPMENT_DEPENDENCIES = [
