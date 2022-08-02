@@ -37,7 +37,6 @@ steps:
     - cat .tags
 - name: docker-prepare-service
   image: plugins/docker
-  file: Prepare.Dockerfile
   when:
     branch:
       - main
@@ -50,3 +49,4 @@ steps:
     password:
       from_secret: docker_password
     repo: wildflowerschools/honeycomb-video-streamer
+    dockerfile: Prepare.Dockerfile
