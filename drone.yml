@@ -7,14 +7,14 @@ metadata:
   namespace: drone
 
 steps:
-- name: set-tag
+- name: set-tag-docker-streamer-service
   image: python:3.9
   environment:
     DRONE: "true"
   commands:
   - echo -n app-v$DRONE_BUILD_NUMBER > .tags
   - cat .tags
-- name: docker
+- name: docker-streamer-service
   image: plugins/docker
   when:
     branch:
@@ -28,14 +28,14 @@ steps:
     password:
       from_secret: docker_password
     repo: wildflowerschools/honeycomb-video-streamer
-- name: set-tag
+- name: set-tag-docker-prepare-service
   image: python:3.9
   environment:
     DRONE: "true"
   commands:
     - echo -n prepare-v$DRONE_BUILD_NUMBER > .tags
     - cat .tags
-- name: docker
+- name: docker-prepare-service
   image: plugins/docker
   file: Prepare.Dockerfile
   when:
