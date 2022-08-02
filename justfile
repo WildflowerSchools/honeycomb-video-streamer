@@ -1,4 +1,4 @@
-version := "v38"
+version := "test"
 
 environment_name := "greenbrier"
 output_path := "public/videos"
@@ -24,9 +24,10 @@ _build-docker-prepare:
 
 build-docker: _build-docker-service _build-docker-prepare
 
-docker-push: build-docker
-    @docker push wildflowerschools/honeycomb-video-streamer:app-{{version}}
-    @docker push wildflowerschools/honeycomb-video-streamer:prepare-{{version}}
+# Removed in lieu of drone.yml
+# docker-push: build-docker
+#    @docker push wildflowerschools/honeycomb-video-streamer:app-{{version}}
+#    @docker push wildflowerschools/honeycomb-video-streamer:prepare-{{version}}
 
 
 prepare-videos:

@@ -16,6 +16,8 @@ spec:
         envFrom:
           - secretRef:
               name: honeycomb-client-settings
+          - secretRef:
+              name: video-storage-client-settings
         env:
         - name: ENVIRONMENT_NAME
           value: greenbrier

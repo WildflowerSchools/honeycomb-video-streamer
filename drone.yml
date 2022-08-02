@@ -28,3 +28,25 @@ steps:
     password:
       from_secret: docker_password
     repo: wildflowerschools/honeycomb-video-streamer
+- name: set-tag
+  image: python:3.9
+  environment:
+    DRONE: "true"
+  commands:
+    - echo -n prepare-v$DRONE_BUILD_NUMBER > .tags
+    - cat .tags
+- name: docker
+  image: plugins/docker
+  file: Prepare.Dockerfile
+  when:
+    branch:
+      - main
+    event:
+      exclude:
+        - pull_request
+  settings:
+    username:
+      from_secret: docker_username
+    password:
+      from_secret: docker_password
+    repo: wildflowerschools/honeycomb-video-streamer

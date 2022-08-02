@@ -1,6 +1,6 @@
-FROM alpine:3.13 as build
+FROM alpine:3.16 as build
 
-ARG FFMPEG_VERSION=4.4
+ARG FFMPEG_VERSION=5.1
 
 ARG PREFIX=/opt/ffmpeg
 ARG LD_LIBRARY_PATH=/opt/ffmpeg/lib
@@ -64,7 +64,6 @@ RUN cd /tmp/ffmpeg-${FFMPEG_VERSION} && \
   --enable-librtmp \
   --enable-librav1e \
   --enable-postproc \
-  --enable-avresample \
   --enable-libfreetype \
   --enable-openssl \
   --disable-debug \
@@ -79,23 +78,30 @@ RUN cd /tmp/ffmpeg-${FFMPEG_VERSION} && \
 # Cleanup.
 RUN rm -rf /var/cache/apk/* /tmp/*
 
-FROM python:3.8.10-alpine3.13
+FROM python:3.10.5-alpine3.16
 
 # Old Alpine command
 RUN apk add --update \
   musl-dev \
+  jpeg-dev \
+  zlib-dev \
+  cairo-dev \
+  pango-dev \
+  gdk-pixbuf-dev \
   linux-headers \
   g++ \
   ca-certificates \
   openssl \
   pcre \
   lame \
+  libffi-dev \
   libogg \
   libass \
   libvpx \
   libvorbis \
   libwebp \
   libtheora \
+  ninja \
   opus \
   rtmpdump \
   x264-dev \
@@ -114,6 +120,7 @@ COPY setup.py /app
 COPY honeycomb_tools/README.md /app/honeycomb_tools
 
 WORKDIR /app
+RUN pip install --upgrade pip setuptools wheel
 RUN pip install -v -e .
 
 COPY honeycomb_tools/*.py /app/honeycomb_tools/
