@@ -121,6 +121,7 @@ COPY honeycomb_tools/README.md /app/honeycomb_tools
 
 WORKDIR /app
 RUN pip install --upgrade pip setuptools wheel
+RUN pip install opencv-python
 RUN pip install -v -e .
 
 COPY honeycomb_tools/*.py /app/honeycomb_tools/

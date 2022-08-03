@@ -28,6 +28,7 @@ steps:
     password:
       from_secret: docker_password
     repo: wildflowerschools/honeycomb-video-streamer
+    cache_from: wildflowerschools/honeycomb-video-streamer:app-latest
 - name: set-tag-docker-prepare-service
   image: python:3.9
   environment:
@@ -50,3 +51,4 @@ steps:
       from_secret: docker_password
     repo: wildflowerschools/honeycomb-video-streamer
     dockerfile: Prepare.Dockerfile
+#    cache_from: wildflowerschools/honeycomb-video-streamer:prepare-latest
