@@ -12,7 +12,7 @@ steps:
   environment:
     DRONE: "true"
   commands:
-  - echo -n app-v$DRONE_BUILD_NUMBER > .tags
+  - echo -n app-v$DRONE_BUILD_NUMBER,app-latest > .tags
   - cat .tags
 - name: docker-streamer-service
   image: plugins/docker
@@ -33,7 +33,7 @@ steps:
   environment:
     DRONE: "true"
   commands:
-    - echo -n prepare-v$DRONE_BUILD_NUMBER > .tags
+    - echo -n prepare-v$DRONE_BUILD_NUMBER,prepare-latest > .tags
     - cat .tags
 - name: docker-prepare-service
   image: plugins/docker
