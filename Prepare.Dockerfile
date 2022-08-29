@@ -78,7 +78,7 @@ RUN cd /tmp/ffmpeg-${FFMPEG_VERSION} && \
 # Cleanup.
 RUN rm -rf /var/cache/apk/* /tmp/*
 
-FROM python:3.10.5-alpine3.16
+FROM python:alpine3.16
 
 # Old Alpine command
 RUN apk add --update \
