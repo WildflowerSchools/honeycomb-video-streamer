@@ -1,6 +1,6 @@
-FROM alpine:3.16 as build
+FROM alpine:3.17 as build
 
-ARG FFMPEG_VERSION=5.1
+ARG FFMPEG_VERSION=5.1.2
 
 ARG PREFIX=/opt/ffmpeg
 ARG LD_LIBRARY_PATH=/opt/ffmpeg/lib
@@ -78,7 +78,7 @@ RUN cd /tmp/ffmpeg-${FFMPEG_VERSION} && \
 # Cleanup.
 RUN rm -rf /var/cache/apk/* /tmp/*
 
-FROM python:alpine3.16
+FROM python:3.10.9-alpine3.17
 
 # Old Alpine command
 RUN apk add --update \
@@ -113,17 +113,16 @@ COPY --from=build /usr/lib/librav1e.so /usr/lib/librav1e.so
 
 ENV PATH=${PATH}:/opt/ffmpeg/bin
 
-RUN mkdir -p /app
-RUN mkdir -p /app/honeycomb_tools
-
-COPY setup.py /app
-COPY honeycomb_tools/README.md /app/honeycomb_tools
-
 WORKDIR /app
-RUN pip install --upgrade pip setuptools wheel
-RUN pip install opencv-python
-RUN pip install -v -e .
 
+RUN pip install --upgrade pip poetry wheel
+RUN pip install opencv-python
+
+COPY setup.py pyproject.toml /app/
+RUN poetry lock && poetry export -f requirements.txt --without dev | pip install -r /dev/stdin
+
+RUN mkdir -p /app/honeycomb_tools
+COPY honeycomb_tools/README.md /app/honeycomb_tools
 COPY honeycomb_tools/*.py /app/honeycomb_tools/
 COPY honeycomb_tools/assets/ /app/honeycomb_tools/assets
 COPY scripts/ /app
