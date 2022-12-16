@@ -13,29 +13,35 @@ from .models import ClassroomList, Classroom, ClassroomResponse, Playset, Playse
 engine = create_engine(os.environ.get("DATABASE_URI"))
 
 metadata = MetaData()
-classrooms = Table('classroom', metadata,
-                   Column('id', UUID(), primary_key=True),
-                   Column('name', String(16), nullable=False),
-                   )
+classrooms = Table(
+    "classroom",
+    metadata,
+    Column("id", UUID(), primary_key=True),
+    Column("name", String(16), nullable=False),
+)
 
-videos = Table('video', metadata,
-               Column('id', UUID(), primary_key=True, nullable=False),
-               Column('playset_id', UUID(), ForeignKey("playset.id"), nullable=False),
-               Column('device_id', UUID(), nullable=True),
-               Column('device_name', String(), nullable=True),
-               Column('preview_url', String(), nullable=True),
-               Column('preview_thumbnail_url', String(), nullable=True),
-               Column('url', String(), nullable=True),
-               )
+videos = Table(
+    "video",
+    metadata,
+    Column("id", UUID(), primary_key=True, nullable=False),
+    Column("playset_id", UUID(), ForeignKey("playset.id"), nullable=False),
+    Column("device_id", UUID(), nullable=True),
+    Column("device_name", String(), nullable=True),
+    Column("preview_url", String(), nullable=True),
+    Column("preview_thumbnail_url", String(), nullable=True),
+    Column("url", String(), nullable=True),
+)
 
-playsets = Table('playset', metadata,
-                 Column('id', UUID(), primary_key=True, nullable=False),
-                 Column('classroom_id', UUID(), ForeignKey("classroom.id"), nullable=False),
-                 Column('name', String(), nullable=True),
-                 Column('date', Date(), nullable=True),
-                 Column('start_time', Time(), nullable=True),
-                 Column('end_time', Time(), nullable=True),
-                 )
+playsets = Table(
+    "playset",
+    metadata,
+    Column("id", UUID(), primary_key=True, nullable=False),
+    Column("classroom_id", UUID(), ForeignKey("classroom.id"), nullable=False),
+    Column("name", String(), nullable=True),
+    Column("date", Date(), nullable=True),
+    Column("start_time", Time(), nullable=True),
+    Column("end_time", Time(), nullable=True),
+)
 
 
 metadata.create_all(engine)
@@ -51,7 +57,9 @@ async def get_allowed_classrooms(subject):
     for row in results:
         c = Classroom(**row)
         all_classrooms.append(c)
-    perm_check = await check_requests([AuthRequest(sub=subject[0], dom=subject[1], obj=f"{c.id}:videos", act="read") for c in all_classrooms])
+    perm_check = await check_requests(
+        [AuthRequest(sub=subject[0], dom=subject[1], obj=f"{c.id}:videos", act="read") for c in all_classrooms]
+    )
     for i, c in enumerate(perm_check):
         if c["allow"]:
             result.classrooms.append(all_classrooms[i])
@@ -76,9 +84,8 @@ def get_classroom(classroom_id):
 def get_playset(classroom_id, playset_date):
     conn = engine.connect()
     playset = conn.execute(
-        select(playsets).where(
-            playsets.c.classroom_id == classroom_id,
-            playsets.c.date == playset_date))
+        select(playsets).where(playsets.c.classroom_id == classroom_id, playsets.c.date == playset_date)
+    )
     if playset is None:
         raise HTTPException(status_code=401, detail="not_found")
     response = PlaysetResponse(**playset.first())

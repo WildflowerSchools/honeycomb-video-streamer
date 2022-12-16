@@ -30,4 +30,5 @@ class StatusResponse(BaseModel):
 async def root():
     return StatusResponse()
 
+
 app.include_router(router)

@@ -9,9 +9,9 @@ end := "2021-05-28T17:00"
 system-info:
     @echo "system info: {{ os() }} ({{ os_family() }}) on {{arch()}}".
 
-fmt-python:
-    autopep8 --aggressive --recursive --in-place ./honeycomb_tools/
-    autopep8 --aggressive --recursive --in-place ./multiview_stream_service/
+fmt:
+    black ./honeycomb_tools/
+    black ./multiview_stream_service/
 
 install-dev:
     pip install -e .[development]
