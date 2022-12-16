@@ -9,6 +9,12 @@ metadata:
 steps:
 - name: set-tag-docker-streamer-service
   image: python:3.9
+  when:
+    branch:
+      - main
+    event:
+      exclude:
+        - pull_request
   environment:
     DRONE: "true"
   commands:
