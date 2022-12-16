@@ -23,7 +23,7 @@ def date_to_day_format(day):
 
 def date_to_video_history_format(date):
     d = str_to_date(date)
-    return d.isoformat(sep='T', timespec='seconds')
+    return d.isoformat(sep="T", timespec="seconds")
 
 
 def create_dir(dir_path):

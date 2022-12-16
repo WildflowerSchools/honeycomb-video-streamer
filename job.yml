@@ -12,7 +12,7 @@ spec:
     spec:
       containers:
       - name: migrate
-        image: wildflowerschools/honeycomb-video-streamer:prepare-v31
+        image: wildflowerschools/honeycomb-video-streamer:prepare-latest
         envFrom:
           - secretRef:
               name: honeycomb-client-settings

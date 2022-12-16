@@ -17,7 +17,7 @@ STATIC_PATH = os.environ.get("STATIC_PATH", "./public/videos")
 
 
 async def can_access_classroom(classroom_id: str):
-    resp = check_requests([Predicate(obj=f"{classroom_id}:videos", act='read')])
+    resp = check_requests([Predicate(obj=f"{classroom_id}:videos", act="read")])
     return resp[0]["allow"]
 
 
@@ -31,21 +31,20 @@ async def load_classroom(classroom_id: str):
     return get_classroom(classroom_id)
 
 
-@router.get("/videos/{classroom_id}/{playest_date}",
-            dependencies=[Depends(verify_token)], response_model=PlaysetResponse)
+@router.get(
+    "/videos/{classroom_id}/{playest_date}", dependencies=[Depends(verify_token)], response_model=PlaysetResponse
+)
 async def load_playset(classroom_id: str, playest_date: str):
     return get_playset(classroom_id, playest_date)
 
 
-@router.get("/videos/{classroom_id}/{playest_date}/{filename}",
-            dependencies=[Depends(verify_token)])
+@router.get("/videos/{classroom_id}/{playest_date}/{filename}", dependencies=[Depends(verify_token)])
 async def videos_root(classroom_id: str, playest_date: str, filename: str):
-    path = f'{STATIC_PATH}/{classroom_id}/{playest_date}/{filename}'
+    path = f"{STATIC_PATH}/{classroom_id}/{playest_date}/{filename}"
     return FileResponse(Path(path).resolve())
 
 
-@router.get("/videos/{classroom_id}/{playest_date}/{camera_name}/{filename}",
-            dependencies=[Depends(verify_token)])
+@router.get("/videos/{classroom_id}/{playest_date}/{camera_name}/{filename}", dependencies=[Depends(verify_token)])
 async def videos(classroom_id: str, playest_date: str, camera_name: str, filename: str):
-    path = f'{STATIC_PATH}/{classroom_id}/{playest_date}/{camera_name}/{filename}'
+    path = f"{STATIC_PATH}/{classroom_id}/{playest_date}/{camera_name}/{filename}"
     return FileResponse(Path(path).resolve())
