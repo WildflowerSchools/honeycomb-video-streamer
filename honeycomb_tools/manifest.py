@@ -1,26 +1,27 @@
+import copy
 import logging
 import os
-from multiprocessing import Pool, cpu_count
+from multiprocessing import cpu_count
 import shutil
 import tempfile
 
 import video_io
 
-from .transcode import copy_technical_difficulties_clip
 from . import util
 
 
 class Manifest(object):
-    def __init__(self, output_directory=""):
+    def __init__(self, output_directory="", empty_clip_path=""):
         self.captured_video_list = []
         self.missing_video_list = []
         self.downloaded_video_list = []
         self.output_directory = output_directory
+        self.empty_clip_path = empty_clip_path
 
     def get_files(self):
         last_available_video_end_time = self.get_last_valid_clip_end_time()
 
-        files = self.captured_video_list
+        files = copy.copy(self.captured_video_list)
 
         for missing_file in self.missing_video_list:
             if last_available_video_end_time is not None and missing_file['start'] < last_available_video_end_time:
@@ -42,6 +43,7 @@ class Manifest(object):
 
     def add_to_missing(self, start, end):
         self.missing_video_list.append({
+            "video_streamer_path": self.empty_clip_path,
             "start": util.str_to_date(start),
             "end": util.str_to_date(end)})
 
@@ -52,10 +54,10 @@ class Manifest(object):
 
         return last_available_video_end_time
 
-    def download_files(self, workers=cpu_count() - 1):
+    def download_files(self, workers=cpu_count() - 1, rewrite=False):
         downloadable_video_list = []
         for video in self.captured_video_list:
-            if not os.path.exists(video['video_streamer_path']):
+            if not os.path.exists(video['video_streamer_path']) or rewrite:
                 util.create_dir(self.output_directory)
                 downloadable_video_list.append(video)
 
@@ -77,15 +79,5 @@ class Manifest(object):
 
             return videos
 
-    def execute(self, empty_clip_path, rewrite=False, processes=None):
-        last_available_video_end_time = self.get_last_valid_clip_end_time()
-
-        for missing in self.missing_video_list:
-            output_path = self.output_directory
-            if last_available_video_end_time is not None and missing[
-                    "start"] < last_available_video_end_time:
-                util.create_dir(output_path)
-                copy_technical_difficulties_clip(
-                    empty_clip_path, output_path, rewrite)
-
-        return self.download_files()
+    def execute(self, rewrite=False):
+        return self.download_files(rewrite=rewrite)

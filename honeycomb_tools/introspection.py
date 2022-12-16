@@ -131,7 +131,7 @@ def process_video_metadata_for_download(
         end_formatted_time = clean_pd_ts(idx_datetime + timedelta(seconds=10))
         # output = os.path.join(target, f"{start_formatted_time}.video.mp4")
 
-        if pd.isnull(row['data_id']):
+        if pd.isnull(row['data_id']) or pd.isnull(row['path']):
             manifest.add_to_missing(start=start_formatted_time,
                                     end=end_formatted_time)
         else:

@@ -229,13 +229,15 @@ def prepare_videos_for_environment_for_time_range(
         manifest = process_video_metadata_for_download(video_metadata=video_metadata,
                                                        start=start,
                                                        end=end,
-                                                       manifest=Manifest(output_directory=camera_specific_directory))
+                                                       manifest=Manifest(
+                                                           output_directory=camera_specific_directory,
+                                                           empty_clip_path=const.empty_clip_path(output_path)
+                                                       )
+                                                       )
         if len(manifest.get_files()) == 0:
             continue
 
-        manifest.execute(
-            empty_clip_path=const.empty_clip_path(output_path),
-            rewrite=rewrite_current)
+        manifest.execute(rewrite=rewrite_current)
 
         hls_out = os.path.join(camera_specific_directory, "output.m3u8")
         hls_thumb_out = os.path.join(
