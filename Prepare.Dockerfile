@@ -1,51 +1,75 @@
-FROM alpine:3.17 as build
+FROM python:3.10.9-slim as build
 
 ARG FFMPEG_VERSION=5.1.2
+ARG RAV1E_VERSION=0.6.1
 
-ARG PREFIX=/opt/ffmpeg
-ARG LD_LIBRARY_PATH=/opt/ffmpeg/lib
+ARG RAV1E_PREFIX=/opt/rav1e
+ARG FFMPEG_PREFIX=/opt/ffmpeg
 ARG MAKEFLAGS="-j4"
 
 # FFmpeg build dependencies.
-RUN apk add --update \
-  build-base \
-  coreutils \
-  freetype-dev \
-  gcc \
-  lame-dev \
-  libogg-dev \
-  libass \
-  libass-dev \
-  libvpx-dev \
-  libvorbis-dev \
-  libwebp-dev \
-  libtheora-dev \
-  opus-dev \
-  openssl \
-  openssl-dev \
-  pkgconf \
-  pkgconfig \
-  rtmpdump-dev \
-  wget \
-  x264-dev \
-  x265-dev \
-  yasm
+RUN apt update -y && apt install -y \
+    autoconf \
+    automake \
+    build-essential \
+    cmake \
+    curl \
+    git-core \
+    libass-dev \
+    libfreetype6-dev \
+    libgnutls28-dev \
+    libmp3lame-dev \
+    libopus-dev \
+    librtmp-dev \
+    libsdl2-dev \
+    libssl-dev \
+    libtheora-dev \
+    libtool \
+    libva-dev \
+    libvdpau-dev \
+    libvorbis-dev \
+    libvpx-dev \
+    libwebp-dev \
+    libxcb1-dev \
+    libxcb-shm0-dev \
+    libxcb-xfixes0-dev \
+    libx264-dev \
+    libx265-dev \
+    meson \
+    ninja-build \
+    pkg-config \
+    texinfo \
+    wget \
+    yasm \
+    zlib1g-dev
 
-# Get fdk-aac from community.
-RUN echo http://dl-cdn.alpinelinux.org/alpine/edge/community >> /etc/apk/repositories && \
-  apk add --update fdk-aac-dev
+WORKDIR /tmp
+# Get rav1e source and install library
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
+    export PATH=$HOME/.cargo/bin:$PATH && \
+    cargo install cargo-c && \
+    wget https://github.com/xiph/rav1e/archive/refs/tags/v${RAV1E_VERSION}.tar.gz && \
+    tar zxf v${RAV1E_VERSION}.tar.gz && \
+    cd /tmp/rav1e-${RAV1E_VERSION} && \
+    mkdir -p /usr/local/lib && \
+    rustup target add aarch64-unknown-linux-gnu && \
+    cargo cinstall \
+      --library-type=cdylib \
+      --release \
+      --target=aarch64-unknown-linux-gnu \
+      --prefix=${RAV1E_PREFIX} \
+      --libdir=${RAV1E_PREFIX}/lib \
+      --includedir=${RAV1E_PREFIX}/include
 
-# Get rav1e from testing.
-RUN echo http://dl-cdn.alpinelinux.org/alpine/edge/testing >> /etc/apk/repositories && \
-  apk add --update rav1e-dev
-
-# Get ffmpeg source.
-RUN cd /tmp/ && \
-  wget http://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.gz && \
-  tar zxf ffmpeg-${FFMPEG_VERSION}.tar.gz && rm ffmpeg-${FFMPEG_VERSION}.tar.gz
+# Get ffmpeg source and install library
+RUN wget http://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.gz && \
+    tar zxf ffmpeg-${FFMPEG_VERSION}.tar.gz && \
+    rm ffmpeg-${FFMPEG_VERSION}.tar.gz
 
 # Compile ffmpeg.
 RUN cd /tmp/ffmpeg-${FFMPEG_VERSION} && \
+  PKG_CONFIG_PATH=${RAV1E_PREFIX}/lib/pkgconfig \
+  C_INCLUDE_PATH=${RAV1E_PREFIX}/include/rav1e \
   ./configure \
   --enable-version3 \
   --enable-gpl \
@@ -58,7 +82,6 @@ RUN cd /tmp/ffmpeg-${FFMPEG_VERSION} && \
   --enable-libtheora \
   --enable-libvorbis \
   --enable-libopus \
-  --enable-libfdk-aac \
   --enable-libass \
   --enable-libwebp \
   --enable-librtmp \
@@ -69,47 +92,25 @@ RUN cd /tmp/ffmpeg-${FFMPEG_VERSION} && \
   --disable-debug \
   --disable-doc \
   --disable-ffplay \
-  --extra-cflags="-I${PREFIX}/include" \
-  --extra-ldflags="-L${PREFIX}/lib" \
+  --extra-cflags="-I${FFMPEG_PREFIX}/include" \
+  --extra-ldflags="-L${FFMPEG_PREFIX}/lib" \
   --extra-libs="-lpthread -lm" \
-  --prefix="${PREFIX}" && \
-  make && make install && make distclean
+  --prefix="${FFMPEG_PREFIX}" && \
+  PKG_CONFIG_PATH=${RAV1E_PREFIX}/lib/pkgconfig \
+  C_INCLUDE_PATH=${RAV1E_PREFIX}/include/rav1e:${RAV1E_PREFIX}/lib \
+  make ${MAKEFLAGS} && make install && make distclean
 
-# Cleanup.
-RUN rm -rf /var/cache/apk/* /tmp/*
 
-FROM python:3.10.9-alpine3.17
+FROM python:3.10.9-slim
 
-# Old Alpine command
-RUN apk add --update \
-  musl-dev \
-  jpeg-dev \
-  zlib-dev \
-  cairo-dev \
-  pango-dev \
-  gdk-pixbuf-dev \
-  linux-headers \
-  g++ \
-  ca-certificates \
-  openssl \
-  pcre \
-  lame \
-  libffi-dev \
-  libogg \
-  libass \
-  libvpx \
-  libvorbis \
-  libwebp \
-  libtheora \
-  ninja \
-  opus \
-  rtmpdump \
-  x264-dev \
-  x265-dev
+RUN apt update -y && \
+    apt-get install -y libgl1 \
+    libglib2.0-0
+
+RUN mkdir -p /build
 
 COPY --from=build /opt/ffmpeg /opt/ffmpeg
-COPY --from=build /usr/lib/libfdk-aac.so.2 /usr/lib/libfdk-aac.so.2
-COPY --from=build /usr/lib/librav1e.so /usr/lib/librav1e.so
+COPY --from=build /opt/rav1e/lib/librav1e.so /usr/lib/librav1e.so
 
 ENV PATH=${PATH}:/opt/ffmpeg/bin
 
