@@ -26,7 +26,7 @@ RUN apt update -y && \
     libxv1
 
 COPY --from=build /opt/ffmpeg /opt/ffmpeg
-COPY --from=build /opt/rav1e/lib/librav1e.so* /usr/lib/librav1e.so*
+COPY --from=build /opt/rav1e/lib/librav1e.so* /usr/lib/
 
 ENV PATH=${PATH}:/opt/ffmpeg/bin
 
@@ -36,7 +36,8 @@ RUN pip install --upgrade pip poetry wheel
 RUN pip install opencv-python
 
 COPY setup.py pyproject.toml /app/
-RUN poetry lock && poetry export -f requirements.txt --without dev | pip install -r /dev/stdin
+RUN poetry lock && \
+    poetry export -f requirements.txt --without dev | pip install -r /dev/stdin
 
 RUN mkdir -p /app/honeycomb_tools
 COPY honeycomb_tools/README.md /app/honeycomb_tools
