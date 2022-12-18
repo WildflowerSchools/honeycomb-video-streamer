@@ -354,28 +354,27 @@ def prepare_videos_for_environment_for_time_range(
         with open(current_input_files_path, "w") as fp:
             count = 0
             for file in sorted(manifest.get_files(), key=lambda x: x["video_streamer_path"]):
-                line = file["video_streamer_path"]
+                video_snippet_path = file["video_streamer_path"]
                 # Skip video files that have already been processed
-                if line in already_processed_files:
+                if video_snippet_path in already_processed_files:
                     continue
 
                 # Process new video files
-                current_video_history["files"].append(line)
+                current_video_history["files"].append(video_snippet_path)
                 # '2021-04-15T13:00:00.000Z.video.mp4'
-                file_name = os.path.basename(line)
+                file_name = os.path.basename(video_snippet_path)
 
                 if current_video_history["end_time"] is None or file["end"] > util.str_to_date(
                     current_video_history["end_time"]
                 ):
                     current_video_history["end_time"] = util.date_to_video_history_format(file["end"])
 
-                num_frames = count_frames(line)
+                logger.info(f"Preparing '{video_snippet_path}' for HLS generation...")
+                num_frames = count_frames(video_snippet_path)
                 if num_frames < 100:  # and num_frames > 97:
-                    pad_video(line, line, frames=(100 - num_frames))
-                    num_frames == 100
+                    pad_video(video_snippet_path, video_snippet_path, frames=(100 - num_frames))
                 if num_frames == 101:
-                    trim_video(line, line)
-                    num_frames == 100
+                    trim_video(video_snippet_path, video_snippet_path)
 
                 fp.write(f"file 'file:{camera_specific_directory}/")
                 fp.write(file_name)
