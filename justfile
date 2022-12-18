@@ -20,7 +20,8 @@ _build-docker-service:
     @docker build -t wildflowerschools/honeycomb-video-streamer:{{version}} -f Dockerfile .
 
 _build-docker-prepare:
-    @docker build -t wildflowerschools/honeycomb-video-streamer:prepare-{{version}} -f Prepare.Dockerfile .
+    @docker build -t wildflowerschools/honeycomb-video-streamer:prepare-stage-0-{{version}} -f Prepare.stage-0.Dockerfile .
+    @docker build --build-arg "TAG={{version}}" -t wildflowerschools/honeycomb-video-streamer:prepare-{{version}} -f Prepare.Dockerfile .
 
 build-docker: _build-docker-service _build-docker-prepare
 

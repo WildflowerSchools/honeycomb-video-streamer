@@ -35,6 +35,35 @@ steps:
       from_secret: docker_password
     repo: wildflowerschools/honeycomb-video-streamer
     cache_from: wildflowerschools/honeycomb-video-streamer:app-latest
+- name: set-tag-docker-prepare-stage-0-service
+  image: python:3.9
+  when:
+    branch:
+      - main
+    event:
+      exclude:
+        - pull_request
+  environment:
+    DRONE: "true"
+  commands:
+    - echo -n prepare-latest > .tags
+    - cat .tags
+- name: docker-prepare-stage-0-service
+  image: plugins/docker
+  when:
+    branch:
+      - main
+    event:
+      exclude:
+        - pull_request
+  settings:
+    username:
+      from_secret: docker_username
+    password:
+      from_secret: docker_password
+    repo: wildflowerschools/honeycomb-video-streamer
+    dockerfile: Prepare.stage-0.Dockerfile
+    cache_from: wildflowerschools/honeycomb-video-streamer:prepare-stage-0-latest
 - name: set-tag-docker-prepare-service
   image: python:3.9
   when:
