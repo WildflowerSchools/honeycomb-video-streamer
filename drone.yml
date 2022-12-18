@@ -46,7 +46,7 @@ steps:
   environment:
     DRONE: "true"
   commands:
-    - echo -n prepare-latest > .tags
+    - echo -n prepare-stage-0-latest > .tags
     - cat .tags
 - name: docker-prepare-stage-0-service
   image: plugins/docker
