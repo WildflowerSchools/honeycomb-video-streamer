@@ -214,7 +214,10 @@ def copy_technical_difficulties_clip(clip_path, output_path, rewrite=False):
         create_technical_difficulties_clip(clip_path)
 
     if rewrite or not os.path.exists(output_path):
-        shutil.copy(clip_path, output_path)
+        try:
+            shutil.copy(clip_path, output_path)
+        except shutil.SameFileError:
+            pass
 
 
 def pad_video(input_path, output_path, frames):
