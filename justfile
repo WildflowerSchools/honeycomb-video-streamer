@@ -20,8 +20,12 @@ _build-docker-service:
     @docker build -t wildflowerschools/honeycomb-video-streamer:{{version}} -f Dockerfile .
 
 _build-docker-prepare:
-    @docker build -t wildflowerschools/honeycomb-video-streamer:prepare-stage-0-{{version}} -f Prepare.stage-0.Dockerfile .
-    @docker build --build-arg "TAG={{version}}" -t wildflowerschools/honeycomb-video-streamer:prepare-{{version}} -f Prepare.Dockerfile .
+    -sudo docker buildx rm multiarch
+    @sudo docker buildx create --name multiarch
+    @sudo docker buildx use multiarch
+    @sudo docker buildx build -t wildflowerschools/honeycomb-video-streamer:prepare-stage-0-{{version}} -f Prepare.stage-0.Dockerfile --load .
+    @sudo docker buildx --build-arg "TAG={{version}}" -t wildflowerschools/honeycomb-video-streamer:prepare-{{version}} -f Prepare.Dockerfile --load .
+    @sudo docker buildx rm multiarch
 
 build-docker: _build-docker-service _build-docker-prepare
 

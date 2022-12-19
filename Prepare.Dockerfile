@@ -1,7 +1,7 @@
 ARG TAG=latest
-FROM --platform=linux/amd64 wildflowerschools/honeycomb-video-streamer:prepare-stage-0-${TAG} as build
+FROM wildflowerschools/honeycomb-video-streamer:prepare-stage-0-${TAG} as build
 
-FROM --platform=linux/amd64 python:3.10.9-slim
+FROM python:3.10.9-slim
 
 RUN apt update -y && \
     apt-get install -y \

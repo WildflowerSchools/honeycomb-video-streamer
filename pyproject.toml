@@ -4,7 +4,7 @@ dynamic = ["version"]
 
 [tool.poetry]
 name = "honeycomb-video-streamer"
-version = "2.0.0"
+version = "2.1.0"
 authors = ["Paul DeCoursey <paul.decoursey@wildflowerschools.org>"]
 maintainers = ["Benjamin Jaffe-Talberg <ben.talberg@wildflowerschools.org>"]
 description = "Python tools to prepare videos for streaming from honeycomb"

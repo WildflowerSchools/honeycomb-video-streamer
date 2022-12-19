@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 python:3.10.9-slim
+FROM python:3.10.9-slim
 
 ARG FFMPEG_VERSION=5.1.2
 ARG RAV1E_VERSION=0.6.1

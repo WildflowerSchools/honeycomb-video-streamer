@@ -49,7 +49,7 @@ steps:
     - echo -n prepare-stage-0-latest > .tags
     - cat .tags
 - name: docker-prepare-stage-0-service
-  image: plugins/docker
+  image: thegeeklab/drone-docker-buildx
   when:
     branch:
       - main
@@ -63,6 +63,7 @@ steps:
       from_secret: docker_password
     repo: wildflowerschools/honeycomb-video-streamer
     dockerfile: Prepare.stage-0.Dockerfile
+    platforms: linux/amd64,linux/arm64
     cache_from: wildflowerschools/honeycomb-video-streamer:prepare-stage-0-latest
 - name: set-tag-docker-prepare-service
   image: python:3.9
@@ -78,7 +79,7 @@ steps:
     - echo -n prepare-v$DRONE_BUILD_NUMBER,prepare-latest > .tags
     - cat .tags
 - name: docker-prepare-service
-  image: plugins/docker
+  image: thegeeklab/drone-docker-buildx
   when:
     branch:
       - main
@@ -92,4 +93,5 @@ steps:
       from_secret: docker_password
     repo: wildflowerschools/honeycomb-video-streamer
     dockerfile: Prepare.Dockerfile
+    platforms: linux/amd64,linux/arm64
     cache_from: wildflowerschools/honeycomb-video-streamer:prepare-latest
