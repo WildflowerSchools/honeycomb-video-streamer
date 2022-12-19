@@ -58,10 +58,10 @@ class Manifest(object):
 
         return last_available_video_end_time
 
-    def download_files(self, workers=cpu_count() - 1, rewrite=False):
+    def download_files(self, workers=cpu_count() - 1):
         downloadable_video_list = []
         for video in self.captured_video_list:
-            if not os.path.exists(video["video_streamer_path"]) or rewrite:
+            if not os.path.exists(video["video_streamer_path"]):
                 util.create_dir(self.output_directory)
                 downloadable_video_list.append(video)
 
@@ -82,5 +82,5 @@ class Manifest(object):
 
             return videos
 
-    def execute(self, rewrite=False):
-        return self.download_files(rewrite=rewrite)
+    def execute(self):
+        return self.download_files()

@@ -226,6 +226,8 @@ def prepare_videos_for_environment_for_time_range(
 
     index_manifest = {}
     if not os.path.isfile(manifest_path):
+        if rewrite is False:
+            logging.warning(f"Manifest '{manifest_path}' missing. Setting rewrite flag to True.")
         rewrite = True
     else:
         with open(manifest_path, "r") as fp:
@@ -277,7 +279,7 @@ def prepare_videos_for_environment_for_time_range(
         if len(manifest.get_files()) == 0:
             continue
 
-        manifest.execute(rewrite=rewrite_current)
+        manifest.execute()
 
         hls_out = os.path.join(camera_specific_directory, "output.m3u8")
         hls_thumb_out = os.path.join(camera_specific_directory, "output-small.m3u8")
