@@ -24,6 +24,7 @@ from .transcode import (
     pad_video,
     prepare_hls,
     trim_video,
+    copy_technical_difficulties_clip,
 )
 from .manifest import Manifest
 from .manifestations import add_classroom, add_date_to_classroom
@@ -221,8 +222,12 @@ def prepare_videos_for_environment_for_time_range(
 
     # prep this output's environment index.json manifest file
     # this index will point to each camera's HLS and thumbnail assets
-    manifest_path = os.path.join(output_path, environment_id, output_name, "index.json")
+    env_specific_output_dir = os.path.join(output_path, environment_id, output_name)
+    manifest_path = os.path.join(env_specific_output_dir, "index.json")
     os.makedirs(os.path.dirname(manifest_path), exist_ok=True)
+
+    empty_clip_path = const.empty_clip_path(env_specific_output_dir)
+    copy_technical_difficulties_clip(clip_path=empty_clip_path, output_path=empty_clip_path, rewrite=rewrite)
 
     index_manifest = {}
     if not os.path.isfile(manifest_path):
@@ -272,9 +277,7 @@ def prepare_videos_for_environment_for_time_range(
             video_metadata=video_metadata,
             start=start,
             end=end,
-            manifest=Manifest(
-                output_directory=camera_specific_directory, empty_clip_path=const.empty_clip_path(output_path)
-            ),
+            manifest=Manifest(output_directory=camera_specific_directory, empty_clip_path=empty_clip_path),
         )
         if len(manifest.get_files()) == 0:
             continue
@@ -363,8 +366,6 @@ def prepare_videos_for_environment_for_time_range(
 
                 # Process new video files
                 current_video_history["files"].append(video_snippet_path)
-                # '2021-04-15T13:00:00.000Z.video.mp4'
-                file_name = os.path.basename(video_snippet_path)
 
                 if current_video_history["end_time"] is None or file["end"] > util.str_to_date(
                     current_video_history["end_time"]
@@ -378,8 +379,7 @@ def prepare_videos_for_environment_for_time_range(
                 if num_frames == 101:
                     trim_video(video_snippet_path, video_snippet_path)
 
-                fp.write(f"file 'file:{camera_specific_directory}/")
-                fp.write(file_name)
+                fp.write(f"file 'file:{video_snippet_path}")
                 fp.write(
                     f"' duration 00:00:{util.format_frames(num_frames)} inpoint {vts(count)} outpoint {vts(count + num_frames)}\n"
                 )

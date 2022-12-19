@@ -19,13 +19,14 @@ class Manifest(object):
         self.empty_clip_path = empty_clip_path
 
     def get_files(self):
-        last_available_video_end_time = self.get_last_valid_clip_end_time()
+        # last_available_video_end_time = self.get_last_valid_clip_end_time()
 
         files = copy.copy(self.captured_video_list)
 
         for missing_file in self.missing_video_list:
-            if last_available_video_end_time is not None and missing_file["start"] < last_available_video_end_time:
-                files.append(missing_file)
+            files.append(missing_file)
+            # if last_available_video_end_time is not None and missing_file["start"] < last_available_video_end_time:
+            #     files.append(missing_file)
 
         return files
 

@@ -120,15 +120,16 @@ def process_video_metadata_for_download(video_metadata, start, end, manifest=Man
         df_datapoints = df_datapoints.drop(columns=["video_timestamp"])
         # Scrub duplicates (these shouldn't exist)
         df_datapoints = df_datapoints[~df_datapoints.index.duplicated(keep="first")]
-        # Fill in missing time indices
-        df_datapoints = df_datapoints.reindex(datetimeindex)
 
+    # Fill in missing time indices
+    df_datapoints = df_datapoints.reindex(datetimeindex)
+    # TODO: Consider handling empty df_datapoints and lining it up with timestamps that cover a given start and end time
     for idx_datetime, row in df_datapoints.iterrows():
         start_formatted_time = clean_pd_ts(idx_datetime)
         end_formatted_time = clean_pd_ts(idx_datetime + timedelta(seconds=10))
         # output = os.path.join(target, f"{start_formatted_time}.video.mp4")
 
-        if pd.isnull(row["data_id"]) or pd.isnull(row["path"]):
+        if "data_id" not in row or pd.isnull(row["data_id"]) or "path" not in row or pd.isnull(row["path"]):
             manifest.add_to_missing(start=start_formatted_time, end=end_formatted_time)
         else:
             manifest.add_to_download(video_metadatum=row.to_dict(), start=start_formatted_time, end=end_formatted_time)
