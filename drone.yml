@@ -1,6 +1,6 @@
 kind: pipeline
 type: kubernetes
-name: drone
+name: Build Streamer App
 service_account_name: default
 
 metadata:
@@ -25,10 +25,10 @@ steps:
   image: plugins/docker
   when:
     branch:
-    - main
+      - main
     event:
       exclude:
-      - pull_request
+        - pull_request
   settings:
     username:
       from_secret: docker_username
@@ -37,6 +37,16 @@ steps:
     repo: wildflowerschools/honeycomb-video-streamer
     cache_from: wildflowerschools/honeycomb-video-streamer:app-latest
 
+---
+kind: pipeline
+type: kubernetes
+name: Build Streamer Prepare Service
+service_account_name: default
+
+metadata:
+  namespace: drone
+
+steps:
 #- name: dockerx prep
 #  image: thegeeklab/drone-docker-buildx
 #  privileged: true
@@ -53,8 +63,8 @@ steps:
     - --install
     - all
   volumes:
-    - name: docker
-      path: /var/run/docker.sock
+    - name: dockersock
+      path: /var/run
 
 - name: set-tag-docker-prepare-stage-0-service
   image: python:3.9
@@ -122,7 +132,14 @@ steps:
     platforms: linux/amd64,linux/arm64
     cache_from: wildflowerschools/honeycomb-video-streamer:prepare-latest
 
-volumes:
+services:
   - name: docker
-    host:
-      path: /var/run/docker.sock
+    image: docker:dind
+    privileged: true
+    volumes:
+      - name: dockersock
+        path: /var/run
+
+volumes:
+  - name: dockersock
+    temp: {}
