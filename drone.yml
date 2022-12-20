@@ -51,10 +51,8 @@ steps:
 - name: dockerx prep
   image: thegeeklab/drone-docker
   privileged: true
-  depends_on:
-    - docker
   commands:
-    - sleep 5
+    - sleep 20
     - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
   volumes:
     - name: dockersock
