@@ -24,7 +24,7 @@ _build-docker-prepare:
     @docker buildx create --name multiarch
     @docker buildx use multiarch
     @docker buildx build -t wildflowerschools/honeycomb-video-streamer:prepare-stage-0-{{version}} --platform linux/arm64 -f Prepare.stage-0.Dockerfile --load .
-    @docker buildx --build-arg "TAG={{version}}" -t wildflowerschools/honeycomb-video-streamer:prepare-{{version}} --platform linux/arm64 -f Prepare.Dockerfile --load .
+    @docker buildx build --build-arg "TAG={{version}}" -t wildflowerschools/honeycomb-video-streamer:prepare-{{version}} --platform linux/arm64 -f Prepare.Dockerfile --load .
     @docker buildx rm multiarch
 
 build-docker: _build-docker-service _build-docker-prepare
