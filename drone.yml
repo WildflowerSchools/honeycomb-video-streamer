@@ -55,6 +55,9 @@ steps:
   commands:
     - sleep 5
     - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+  volumes:
+    - name: dockersock
+      path: /var/run
 
 #- name: install-buildx-support
 #  image: tonistiigi/binfmt
