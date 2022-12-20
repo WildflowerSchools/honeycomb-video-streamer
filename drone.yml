@@ -52,6 +52,9 @@ steps:
   command:
     - --install
     - all
+  volumes:
+    - name: docker
+      path: /var/run/docker.sock
 
 - name: set-tag-docker-prepare-stage-0-service
   image: python:3.9
@@ -118,3 +121,8 @@ steps:
     dockerfile: Prepare.Dockerfile
     platforms: linux/amd64,linux/arm64
     cache_from: wildflowerschools/honeycomb-video-streamer:prepare-latest
+
+volumes:
+  - name: docker
+    host:
+      path: /var/run/docker.sock
