@@ -50,6 +50,7 @@ steps:
     - cat .tags
 - name: docker-prepare-stage-0-service
   image: thegeeklab/drone-docker-buildx
+  privileged: true
   when:
     branch:
       - main
@@ -80,6 +81,7 @@ steps:
     - cat .tags
 - name: docker-prepare-service
   image: thegeeklab/drone-docker-buildx
+  privileged: true
   when:
     branch:
       - main
