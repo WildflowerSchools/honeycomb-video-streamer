@@ -52,7 +52,7 @@ steps:
   image: thegeeklab/drone-docker
   privileged: true
   commands:
-    - sleep 20
+    - timeout 15s /bin/sh -c 'while [ ! -S /var/run/docker.sock ]; do sleep 1; done'
     - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
   volumes:
     - name: dockersock

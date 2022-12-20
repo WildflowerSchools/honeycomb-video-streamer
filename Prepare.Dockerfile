@@ -26,7 +26,7 @@ RUN apt update -y && \
     libxv1
 
 COPY --from=build /opt/ffmpeg /opt/ffmpeg
-COPY --from=build /opt/rav1e/lib/librav1e.so* /usr/lib/
+# RAV1E: COPY --from=build /opt/rav1e/lib/librav1e.so* /usr/lib/
 
 ENV PATH=${PATH}:/opt/ffmpeg/bin
 
