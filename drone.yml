@@ -35,12 +35,12 @@ steps:
       from_secret: docker_password
     repo: wildflowerschools/honeycomb-video-streamer
     cache_from: wildflowerschools/honeycomb-video-streamer:app-latest
-- name: dockerx prep
-  image: thegeeklab/drone-docker-buildx
-  privileged: true
-  commands:
-    - sleep 5
-    - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+#- name: dockerx prep
+#  image: thegeeklab/drone-docker-buildx
+#  privileged: true
+#  commands:
+#    - sleep 5
+#    - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 - name: set-tag-docker-prepare-stage-0-service
   image: python:3.9
   when:
@@ -64,6 +64,7 @@ steps:
       exclude:
         - pull_request
   settings:
+    experimental: true
     username:
       from_secret: docker_username
     password:
