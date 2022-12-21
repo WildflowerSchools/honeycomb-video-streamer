@@ -69,27 +69,29 @@ steps:
 #  volumes:
 #    - name: dockersock
 #      path: /var/run
-
-- name: set-tag-docker-prepare-stage-0-service
-  image: python:3.9
-  environment:
-    DRONE: "true"
-  commands:
-    - echo -n prepare-stage-0-latest > .tags
-    - cat .tags
-
-- name: docker-prepare-stage-0-service
-  image: thegeeklab/drone-docker-buildx
-  privileged: true
-  settings:
-    username:
-      from_secret: docker_username
-    password:
-      from_secret: docker_password
-    repo: wildflowerschools/honeycomb-video-streamer
-    dockerfile: Prepare.stage-0.Dockerfile
-    platforms: linux/amd64,linux/arm64
-    cache_from: type=registry\\,ref=wildflowerschools/honeycomb-video-streamer:prepare-stage-0-latest
+#
+#- name: set-tag-docker-prepare-stage-0-service
+#  image: python:3.9
+#  environment:
+#    DRONE: "true"
+#  commands:
+#    - echo -n prepare-stage-0-latest > .tags
+#    - cat .tags
+#
+#- name: docker-prepare-stage-0-service
+#  image: thegeeklab/drone-docker-buildx
+#  privileged: true
+#  settings:
+#    username:
+#      from_secret: docker_username
+#    password:
+#      from_secret: docker_password
+#    repo: wildflowerschools/honeycomb-video-streamer
+#    dockerfile: Prepare.stage-0.Dockerfile
+#    platforms: linux/amd64
+##    platforms: linux/amd64,linux/arm64
+#    cache_from: type=registry\\,ref=wildflowerschools/honeycomb-video-streamer:prepare-stage-0-build-cache
+#    cache_to: type=registry\\,ref=wildflowerschools/honeycomb-video-streamer:prepare-stage-0-build-cache\\,mode=max
 
 - name: set-tag-docker-prepare-service
   image: python:3.9
@@ -109,8 +111,10 @@ steps:
       from_secret: docker_password
     repo: wildflowerschools/honeycomb-video-streamer
     dockerfile: Prepare.Dockerfile
-    platforms: linux/amd64,linux/arm64
-    cache_from: type=registry\\,ref=wildflowerschools/honeycomb-video-streamer:prepare-latest
+    platforms: linux/amd64
+    #    platforms: linux/amd64,linux/arm64
+    cache_from: type=registry\\,ref=wildflowerschools/honeycomb-video-streamer:prepare-cache
+    cache-to: type=registry\\,ref=wildflowerschools/honeycomb-video-streamer:prepare-cache\\,mode=max
 
 services:
   - name: docker

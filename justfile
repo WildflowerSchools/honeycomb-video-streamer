@@ -20,8 +20,8 @@ _build-docker-service:
     @docker build -t wildflowerschools/honeycomb-video-streamer:{{version}} -f Dockerfile .
 
 _build-docker-prepare:
-    @docker build -t wildflowerschools/honeycomb-video-streamer:prepare-stage-0-{{version}} -f Prepare.stage-0.Dockerfile .
-    @docker build --build-arg TAG={{version}} -t wildflowerschools/honeycomb-video-streamer:prepare-{{version}} -f Prepare.Dockerfile .
+    #@docker buildx build -t wildflowerschools/honeycomb-video-streamer:prepare-stage-0-{{version}} --platform linux/arm64 --cache-from=type=local,src=/tmp/buildx-cache --cache-to=type=local,dest=/tmp/buildx-cache -f Prepare.stage-0.Dockerfile --load .
+    @docker buildx build --build-arg TAG={{version}} -t wildflowerschools/honeycomb-video-streamer:prepare-{{version}} --platform linux/arm64 --cache-from=type=local,src=/tmp/buildx-cache --cache-to=type=local,dest=/tmp/buildx-cache -f Prepare.Dockerfile --load .
 
 build-docker: _build-docker-service _build-docker-prepare
 
@@ -32,11 +32,11 @@ build-docker: _build-docker-service _build-docker-prepare
 
 
 prepare-videos:
-    @python -m honeycomb_tools prepare-videos-for-environment-for-time-range  --environment_name {{environment_name}} --output_path {{output_path}} --output_name {{output_name}} --start {{start}} --end {{end}}
+    @python -m honeycomb_tools prepare-videos-for-environment-for-time-range --environment_name {{environment_name}} --output_path {{output_path}} --output_name {{output_name}} --start {{start}} --end {{end}}
 
 
 list-datapoints:
-    @python -m honeycomb_tools list-datapoints-for-environment-for-time-range  --environment_name {{environment_name}} --output_path ./ --output_name datapoints.csv --start {{start}} --end {{end}}
+    @python -m honeycomb_tools list-datapoints-for-environment-for-time-range --environment_name {{environment_name}} --output_path ./ --output_name datapoints.csv --start {{start}} --end {{end}}
 
 lint-app:
     @pylint multiview_stream_service
