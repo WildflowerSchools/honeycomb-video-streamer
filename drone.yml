@@ -114,7 +114,7 @@ steps:
     platforms: linux/amd64
     #    platforms: linux/amd64,linux/arm64
     cache_from:
-      - type=registry,ref=wildflowerschools/honeycomb-video-streamer:prepare-cache
+      - type=registry\\,ref=wildflowerschools/honeycomb-video-streamer:prepare-cache
     cache_to: type=registry,ref=wildflowerschools/honeycomb-video-streamer:prepare-cache,mode=max
 
 services:
