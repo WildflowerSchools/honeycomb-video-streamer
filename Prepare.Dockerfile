@@ -25,8 +25,14 @@ RUN apt update -y && \
     libx265-192 \
     libxv1
 
+COPY ./scripts/add-testing-channel-to-debian.sh .
+
+RUN chmod +x add-testing-channel-to-debian.sh && \
+    ./add-testing-channel-to-debian.sh && \
+    apt -y update && \
+    apt-get -y -t testing install librav1e-dev
+
 COPY --from=build /opt/ffmpeg /opt/ffmpeg
-# RAV1E: COPY --from=build /opt/rav1e/lib/librav1e.so* /usr/lib/
 
 ENV PATH=${PATH}:/opt/ffmpeg/bin
 
