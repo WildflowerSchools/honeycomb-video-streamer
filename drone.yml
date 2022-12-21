@@ -1,37 +1,38 @@
-#kind: pipeline
-#type: kubernetes
-#name: Build Streamer App
-#service_account_name: default
-#
-#metadata:
-#  namespace: drone
-#
-#trigger:
-#  branch:
-#    - main
-#  event:
-#    exclude:
-#      - pull_request
-#
-#steps:
-#- name: set-tag-docker-streamer-service
-#  image: python:3.9
-#  environment:
-#    DRONE: "true"
-#  commands:
-#  - echo -n app-v$DRONE_BUILD_NUMBER,app-latest > .tags
-#  - cat .tags
-#
-#- name: docker-streamer-service
-#  image: plugins/docker
-#  settings:
-#    username:
-#      from_secret: docker_username
-#    password:
-#      from_secret: docker_password
-#    repo: wildflowerschools/honeycomb-video-streamer
-#    cache_from: wildflowerschools/honeycomb-video-streamer:app-latest
+kind: pipeline
+type: kubernetes
+name: Build Streamer App
+service_account_name: default
 
+metadata:
+  namespace: drone
+
+trigger:
+  branch:
+    - main
+  event:
+    exclude:
+      - pull_request
+
+steps:
+- name: set-tag-docker-streamer-service
+  image: python:3.9
+  environment:
+    DRONE: "true"
+  commands:
+  - echo -n app-v$DRONE_BUILD_NUMBER,app-latest > .tags
+  - cat .tags
+
+- name: docker-streamer-service
+  image: plugins/docker
+  settings:
+    username:
+      from_secret: docker_username
+    password:
+      from_secret: docker_password
+    repo: wildflowerschools/honeycomb-video-streamer
+    cache_from: wildflowerschools/honeycomb-video-streamer:app-latest
+
+---
 kind: pipeline
 type: kubernetes
 name: Build Streamer Prepare Service
@@ -58,41 +59,6 @@ steps:
     - name: dockersock
       path: /var/run
 
-#- name: install-buildx-support
-#  image: tonistiigi/binfmt
-#  privileged: true
-#  entrypoint:
-#    - /usr/bin/binfmt
-#  command:
-#    - --install
-#    - all
-#  volumes:
-#    - name: dockersock
-#      path: /var/run
-#
-#- name: set-tag-docker-prepare-stage-0-service
-#  image: python:3.9
-#  environment:
-#    DRONE: "true"
-#  commands:
-#    - echo -n prepare-stage-0-latest > .tags
-#    - cat .tags
-#
-#- name: docker-prepare-stage-0-service
-#  image: thegeeklab/drone-docker-buildx
-#  privileged: true
-#  settings:
-#    username:
-#      from_secret: docker_username
-#    password:
-#      from_secret: docker_password
-#    repo: wildflowerschools/honeycomb-video-streamer
-#    dockerfile: Prepare.stage-0.Dockerfile
-#    platforms: linux/amd64
-##    platforms: linux/amd64,linux/arm64
-#    cache_from: type=registry\\,ref=wildflowerschools/honeycomb-video-streamer:prepare-stage-0-build-cache
-#    cache_to: type=registry\\,ref=wildflowerschools/honeycomb-video-streamer:prepare-stage-0-build-cache\\,mode=max
-
 - name: set-tag-docker-prepare-service
   image: python:3.9
   environment:
@@ -111,8 +77,7 @@ steps:
       from_secret: docker_password
     repo: wildflowerschools/honeycomb-video-streamer
     dockerfile: Prepare.Dockerfile
-    platforms: linux/amd64
-    #    platforms: linux/amd64,linux/arm64
+    platforms: linux/amd64,linux/arm64
     cache_from:
       - type=registry\\,ref=wildflowerschools/honeycomb-video-streamer:prepare-cache
     cache_to: type=registry,ref=wildflowerschools/honeycomb-video-streamer:prepare-cache,mode=max

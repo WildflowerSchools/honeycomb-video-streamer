@@ -20,7 +20,6 @@ _build-docker-service:
     @docker build -t wildflowerschools/honeycomb-video-streamer:{{version}} -f Dockerfile .
 
 _build-docker-prepare:
-    #@docker buildx build -t wildflowerschools/honeycomb-video-streamer:prepare-stage-0-{{version}} --platform linux/arm64 --cache-from=type=local,src=/tmp/buildx-cache --cache-to=type=local,dest=/tmp/buildx-cache -f Prepare.stage-0.Dockerfile --load .
     @docker buildx build --build-arg TAG={{version}} -t wildflowerschools/honeycomb-video-streamer:prepare-{{version}} --platform linux/arm64 --cache-from=type=local,src=/tmp/buildx-cache --cache-to=type=local,dest=/tmp/buildx-cache -f Prepare.Dockerfile --load .
 
 build-docker: _build-docker-service _build-docker-prepare
