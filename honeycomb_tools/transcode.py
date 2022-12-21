@@ -133,7 +133,7 @@ def concat_videos(input_path, output_path, thumb_path=None, rewrite=False):
 
                 if not thumb_exists:
                     ffmpeg.input(output_path).filter("scale", 320, -1).output(
-                        thumb_path, preset="veryfast", sws_flags="fast_bilinear", acodec="copy"
+                        thumb_path, preset="veryfast", sws_flags="fast_bilinear", acodec="copy", crf=30
                     ).run()
                 else:
                     logging.info("small video '{}' already exists".format(thumb_path))
