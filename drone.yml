@@ -89,7 +89,7 @@ steps:
     repo: wildflowerschools/honeycomb-video-streamer
     dockerfile: Prepare.stage-0.Dockerfile
     platforms: linux/amd64,linux/arm64
-    cache_from: type=registry,ref=wildflowerschools/honeycomb-video-streamer:prepare-stage-0-latest
+    cache_from: "type=registry,ref=wildflowerschools/honeycomb-video-streamer:prepare-stage-0-latest"
 
 - name: set-tag-docker-prepare-service
   image: python:3.9
@@ -110,7 +110,7 @@ steps:
     repo: wildflowerschools/honeycomb-video-streamer
     dockerfile: Prepare.Dockerfile
     platforms: linux/amd64,linux/arm64
-    cache_from: type=registry,ref=wildflowerschools/honeycomb-video-streamer:prepare-latest
+    cache_from: "type=registry,ref=wildflowerschools/honeycomb-video-streamer:prepare-latest"
 
 services:
   - name: docker
