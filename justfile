@@ -23,13 +23,6 @@ _build-docker-prepare:
     @docker build -t wildflowerschools/honeycomb-video-streamer:prepare-stage-0-{{version}} -f Prepare.stage-0.Dockerfile .
     @docker build --build-arg TAG={{version}} -t wildflowerschools/honeycomb-video-streamer:prepare-{{version}} -f Prepare.Dockerfile .
 
-    # -docker buildx rm multiarch
-    # @docker buildx create --name multiarch
-    # @docker buildx use multiarch
-    # @docker buildx build -t wildflowerschools/honeycomb-video-streamer:prepare-stage-0-{{version}} --platform linux/arm64 -f Prepare.stage-0.Dockerfile --load .
-    # @docker buildx build --build-arg TAG={{version}} -t wildflowerschools/honeycomb-video-streamer:prepare-{{version}} --platform linux/arm64 -f Prepare.Dockerfile --load .
-    # @docker buildx rm multiarch
-
 build-docker: _build-docker-service _build-docker-prepare
 
 # Removed in lieu of drone.yml
