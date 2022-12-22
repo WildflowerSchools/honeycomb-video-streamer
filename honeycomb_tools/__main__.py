@@ -374,9 +374,9 @@ def prepare_videos_for_environment_for_time_range(
 
                 logger.info(f"Preparing '{video_snippet_path}' for HLS generation...")
                 num_frames = count_frames(video_snippet_path)
-                if num_frames < 100:  # and num_frames > 97:
+                if num_frames < 100:
                     pad_video(video_snippet_path, video_snippet_path, frames=(100 - num_frames))
-                if num_frames == 101:
+                if num_frames > 100:
                     trim_video(video_snippet_path, video_snippet_path)
 
                 fp.write(f"file 'file:{video_snippet_path}")
