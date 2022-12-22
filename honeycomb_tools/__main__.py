@@ -247,7 +247,7 @@ def prepare_videos_for_environment_for_time_range(
 
     # evaluate the assignments to filter out non-camera assignments
     assignments = get_assignments(honeycomb_client, environment_id)
-    for idx, (assignment_id, device_id, assigned_name) in enumerate(assignments):
+    for idx_ii, (assignment_id, device_id, assigned_name) in enumerate(assignments):
         if len(camera) > 0:
             if assignment_id not in camera and device_id not in camera and assigned_name not in camera:
                 logging.info("Skipping camera '{}:{}', not in supplied cameras param".format(device_id, assigned_name))
@@ -292,7 +292,7 @@ def prepare_videos_for_environment_for_time_range(
 
         last_end_time = start
         camera_video_history = []
-        if not os.path.isfile(camera_video_history_path):
+        if index_manifest is None or index_manifest == {} or not os.path.isfile(camera_video_history_path):
             rewrite_current = True
         else:
             with open(camera_video_history_path, "r") as fp:
@@ -403,7 +403,7 @@ def prepare_videos_for_environment_for_time_range(
             generate_preview_image(hls_out, preview_image_out)
             generate_preview_image(hls_thumb_out, preview_image_thumb_out)
 
-        if not generate_hls:
+        if generate_hls:
             current_video_meta = {
                 "device_id": device_id,
                 "device_name": assigned_name,
@@ -416,10 +416,10 @@ def prepare_videos_for_environment_for_time_range(
             # Update or append to the video_meta data object
             ######
             updated_existing_video_meta_record = False
-            for idx, meta_record in enumerate(all_video_meta):
+            for idx_jj, meta_record in enumerate(all_video_meta):
                 if meta_record["device_id"] == device_id:
                     updated_existing_video_meta_record = True
-                    all_video_meta[idx] = current_video_meta
+                    all_video_meta[idx_jj] = current_video_meta
                     break
 
             if not updated_existing_video_meta_record:
@@ -427,16 +427,24 @@ def prepare_videos_for_environment_for_time_range(
             ######
 
             with open(camera_video_history_path, "w") as fp:
-                json.dump(camera_video_history, fp)
+                json.dump(camera_video_history, fp, cls=util.DateTimeEncoder)
                 fp.flush()
 
             # Add a record in the classroom's index that points to this run's video
             # feeds
-            add_date_to_classroom(output_path, environment_id, start[:10], output_name, [start[11:], end[11:]])
+            add_date_to_classroom(
+                root_path=output_path,
+                classroom_id=environment_id,
+                date=start.strftime("%Y-%m-%d"),
+                name=output_name,
+                time_range=[start.strftime("%H:%M:%S%z"), end.strftime("%H:%M:%S%z")],
+            )
 
             with open(manifest_path, "w") as fp:
                 json.dump(
-                    {"start": start, "end": end, "videos": all_video_meta, "building": (idx < len(assignments) - 1)}, fp
+                    {"start": start, "end": end, "videos": all_video_meta, "building": (idx_ii < len(assignments) - 1)},
+                    fp,
+                    cls=util.DateTimeEncoder,
                 )
                 fp.flush()
                 # done

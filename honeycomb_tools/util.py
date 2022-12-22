@@ -1,5 +1,6 @@
-from datetime import datetime
+from datetime import datetime, date
 from dateutil.parser import parse as date_time_parse
+import json
 import os
 import pytz
 
@@ -35,3 +36,11 @@ def format_frames(count):
     full = count // 10
     part = count % 10
     return f"{full:02}.{part}00"
+
+
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, datetime):
+            return o.isoformat()
+
+        return json.JSONEncoder.default(self, o)
