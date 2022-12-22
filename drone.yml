@@ -49,7 +49,8 @@ trigger:
       - pull_request
 
 steps:
-- name: dockerx prep
+# This is apparently needed to make the multi-platform build work. Don't really know what's going on here.
+- name: wait-for-docker-mount
   image: thegeeklab/drone-docker
   privileged: true
   commands:
@@ -83,7 +84,7 @@ steps:
     cache_to: type=registry,ref=wildflowerschools/honeycomb-video-streamer:prepare-cache,mode=max
 
 services:
-  - name: docker
+  - name: docker-service
     image: docker:dind
     privileged: true
     volumes:
