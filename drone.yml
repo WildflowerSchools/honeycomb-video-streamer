@@ -55,6 +55,9 @@ steps:
   commands:
     - timeout 60s /bin/sh -c 'while [ ! -S /var/run/docker.sock ]; do sleep 1; done'
     - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+  volumes:
+    - name: dockersock
+      path: /var/run
 
 - name: set-tag-docker-prepare-service
   image: python:3.9
@@ -78,6 +81,14 @@ steps:
     cache_from:
       - type=registry\\,ref=wildflowerschools/honeycomb-video-streamer:prepare-cache
     cache_to: type=registry,ref=wildflowerschools/honeycomb-video-streamer:prepare-cache,mode=max
+
+services:
+  - name: docker
+    image: docker:dind
+    privileged: true
+    volumes:
+      - name: dockersock
+        path: /var/run
 
 volumes:
   - name: dockersock
