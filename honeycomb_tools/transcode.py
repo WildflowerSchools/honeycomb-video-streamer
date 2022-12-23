@@ -60,10 +60,18 @@ def is_valid_video(video_path):
     return True
 
 
+def probe_file(mp4_video_path):
+    try:
+        return ffmpeg.probe(mp4_video_path)
+    except Exception as err:
+        logging.error(err)
+        raise err
+
+
 def count_frames(mp4_video_path):
     # ffprobe -v error -select_streams v:0 -show_entries stream=nb_frames -of
     # default=nokey=1:noprint_wrappers=1
-    probe = ffmpeg.probe(mp4_video_path)
+    probe = probe_file(mp4_video_path)
     if probe is None or "streams" not in probe:
         err = "ffmpeg returned unexpected response reading {}".format(mp4_video_path)
         logging.error(err)

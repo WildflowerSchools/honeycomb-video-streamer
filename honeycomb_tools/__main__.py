@@ -361,19 +361,18 @@ def prepare_videos_for_environment_for_time_range(
             for file in sorted(manifest.get_files(), key=lambda x: x["video_streamer_path"]):
                 video_snippet_path = file["video_streamer_path"]
                 # Skip video files that have already been processed
-                if video_snippet_path in already_processed_files:
+                if video_snippet_path in already_processed_files and not rewrite:
                     continue
 
                 # Process new video files
-                current_video_history["files"].append(video_snippet_path)
-
-                if current_video_history["end_time"] is None or file["end"] > util.str_to_date(
-                    current_video_history["end_time"]
-                ):
-                    current_video_history["end_time"] = util.date_to_video_history_format(file["end"])
-
                 logger.info(f"Preparing '{video_snippet_path}' for HLS generation...")
-                num_frames = count_frames(video_snippet_path)
+                try:
+                    num_frames = count_frames(video_snippet_path)
+                except Exception as err:
+                    logger.warning(f"Unable to probe '{video_snippet_path}', replacing with empty video clip")
+                    video_snippet_path = empty_clip_path
+                    count_frames(video_snippet_path)
+
                 if num_frames < 100:
                     pad_video(video_snippet_path, video_snippet_path, frames=(100 - num_frames))
                 if num_frames > 100:
@@ -383,6 +382,13 @@ def prepare_videos_for_environment_for_time_range(
                 fp.write(
                     f"' duration 00:00:{util.format_frames(num_frames)} inpoint {vts(count)} outpoint {vts(count + num_frames)}\n"
                 )
+
+                current_video_history["files"].append(video_snippet_path)
+                if current_video_history["end_time"] is None or file["end"] > util.str_to_date(
+                    current_video_history["end_time"]
+                ):
+                    current_video_history["end_time"] = util.date_to_video_history_format(file["end"])
+
                 count += num_frames
             fp.flush()
 
