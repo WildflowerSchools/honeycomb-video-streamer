@@ -1,5 +1,4 @@
 import copy
-import logging
 import os
 from multiprocessing import cpu_count
 import shutil
@@ -8,6 +7,7 @@ import tempfile
 import video_io
 
 from . import util
+from .log import logger
 
 
 class Manifest(object):
@@ -78,7 +78,7 @@ class Manifest(object):
                     err = "Failed copying downloaded video '{}' to final storage path '{}'".format(
                         downloaded_file["video_local_path"], downloaded_file["video_streamer_path"]
                     )
-                    logging.error(err)
+                    logger.error(err)
                     raise ex
 
             return videos

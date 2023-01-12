@@ -12,51 +12,6 @@ from .manifest import Manifest
 from . import util
 
 
-def get_environment_id(honeycomb_client, environment_name):
-    environments = honeycomb_client.query.findEnvironment(name=environment_name)
-    return environments.data[0].get("environment_id")
-
-
-def get_assignments(honeycomb_client, environment_id):
-    assignments = (
-        honeycomb_client.query.query(
-            """
-        query getEnvironment ($environment_id: ID!) {
-          getEnvironment(environment_id: $environment_id) {
-            environment_id
-            name
-            assignments(current: true) {
-              assignment_id
-              assigned_type
-              assigned {
-                ... on Device {
-                  device_id
-                  device_type
-                  part_number
-                  name
-                  tag_id
-                  description
-                  serial_number
-                  mac_address
-                }
-              }
-            }
-          }
-        }
-        """,
-            {"environment_id": environment_id},
-        )
-        .get("getEnvironment")
-        .get("assignments")
-    )
-    return [
-        (assignment["assignment_id"], assignment["assigned"]["device_id"], assignment["assigned"]["name"])
-        for assignment in assignments
-        if assignment["assigned_type"] == "DEVICE"
-        and assignment["assigned"]["device_type"] in ["PI3WITHCAMERA", "PI4WITHCAMERA"]
-    ]
-
-
 def fetch_video_metadata_in_range(environment_id, device_id, start, end):
     start_datetime = start
     if not isinstance(start, datetime):

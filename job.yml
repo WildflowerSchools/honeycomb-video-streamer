@@ -15,9 +15,9 @@ spec:
         image: wildflowerschools/honeycomb-video-streamer:prepare-latest
         envFrom:
           - secretRef:
-              name: honeycomb-client-settings
+              name: honeycomb-honeycomb_client-settings
           - secretRef:
-              name: video-storage-client-settings
+              name: video-storage-honeycomb_client-settings
         env:
         - name: ENVIRONMENT_NAME
           value: greenbrier

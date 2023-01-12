@@ -44,3 +44,13 @@ class DateTimeEncoder(json.JSONEncoder):
             return o.isoformat()
 
         return json.JSONEncoder.default(self, o)
+
+
+def vts(frames):
+    total_seconds = frames // 10
+    fractional = frames % 10
+    total_minutes = total_seconds // 60
+    hours = total_minutes // 60
+    minutes = total_minutes - (hours * 60)
+    seconds = total_seconds - (total_minutes * 60)
+    return f"{hours:02}:{minutes:02}:{seconds:02}.{fractional}00"

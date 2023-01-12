@@ -24,7 +24,7 @@ spec:
                   cpu: "3000m"
               envFrom:
                 - secretRef:
-                    name: honeycomb-client-settings
+                    name: honeycomb-honeycomb_client-settings
               env:
                 - name: ENVIRONMENT_NAME
                   value: greenbrier
