@@ -72,7 +72,7 @@ def list_videos_for_environment_for_time_range(ctx, environment_name, output_pat
     # load the environment to get all the assignments
     honeycomb_client = HoneycombClient()
 
-    environment_id = honeycomb_client.get_environment_by_name(environment_name).get('environment_id')
+    environment_id = honeycomb_client.get_environment_by_name(environment_name).get("environment_id")
     with open(f"{output_path}/{output_name}", "w") as output_fp:
         output_fp.write(f"assignment_id,device_id,assigned_name,timestamp,data_id\n")
         # evaluate the assignments to filter out non-camera assignments
@@ -104,7 +104,12 @@ def list_videos_for_environment_for_time_range(ctx, environment_name, output_pat
     required=True,
 )
 @click.option("--video_directory", "-o", help="root directory to store prepared videos in", required=True)
-@click.option("--video_name", "-n", help="name given to subfolder where video is stored (i.e. /<<video_directory/<<environment_id>>/<<VIDEO_NAME>>/", required=True)
+@click.option(
+    "--video_name",
+    "-n",
+    help="name given to subfolder where video is stored (i.e. /<<video_directory/<<environment_id>>/<<VIDEO_NAME>>/",
+    required=True,
+)
 @click.option(
     "--start",
     type=click.DateTime(formats=cli_valid_date_formats),
@@ -150,7 +155,7 @@ def prepare_videos_for_environment_for_time_range(
         end=end,
         rewrite=rewrite,
         append=append,
-        camera=camera
+        camera=camera,
     )
 
 

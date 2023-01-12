@@ -7,7 +7,16 @@ from fastapi.responses import FileResponse
 
 from wf_fastapi_auth0 import verify_token, get_subject_domain
 from wf_fastapi_auth0.wf_permissions import AuthRequest, check_requests
-from .models import ClassroomList, ClassroomResponse, PlaysetListResponse, PlaysetResponse, Classroom, Playset, Video, VideoResponse
+from .models import (
+    ClassroomList,
+    ClassroomResponse,
+    PlaysetListResponse,
+    PlaysetResponse,
+    Classroom,
+    Playset,
+    Video,
+    VideoResponse,
+)
 
 from .honeycomb_service import HoneycombClient
 from .database import Handle, PermissionException
@@ -20,17 +29,23 @@ STATIC_PATH = os.environ.get("STATIC_PATH", "./public/videos")
 
 
 async def can_read(perm_subject_domain: tuple = Depends(get_subject_domain)):
-    resp = await check_requests([AuthRequest(sub=perm_subject_domain[0], dom=perm_subject_domain[1], obj="classroom:videos", act='read')])
+    resp = await check_requests(
+        [AuthRequest(sub=perm_subject_domain[0], dom=perm_subject_domain[1], obj="classroom:videos", act="read")]
+    )
     return resp[0]["allow"]
 
 
 async def can_write(perm_subject_domain: tuple = Depends(get_subject_domain)):
-    resp = await check_requests([AuthRequest(sub=perm_subject_domain[0], dom=perm_subject_domain[1], obj="classroom:videos", act='write')])
+    resp = await check_requests(
+        [AuthRequest(sub=perm_subject_domain[0], dom=perm_subject_domain[1], obj="classroom:videos", act="write")]
+    )
     return resp[0]["allow"]
 
 
 async def can_delete(perm_subject_domain: tuple = Depends(get_subject_domain)):
-    resp = await check_requests([AuthRequest(sub=perm_subject_domain[0], dom=perm_subject_domain[1], obj="classroom:videos", act='delete')])
+    resp = await check_requests(
+        [AuthRequest(sub=perm_subject_domain[0], dom=perm_subject_domain[1], obj="classroom:videos", act="delete")]
+    )
     return resp[0]["allow"]
 
 
@@ -44,7 +59,11 @@ async def load_classroom_list(perm_subject_domain: tuple = Depends(get_subject_d
         raise HTTPException(status_code=401, detail="not_allowed")
 
 
-@router.get("/videos/classrooms/{classroom_id}", dependencies=[Depends(verify_token), Depends(can_read)], response_model=ClassroomResponse)
+@router.get(
+    "/videos/classrooms/{classroom_id}",
+    dependencies=[Depends(verify_token), Depends(can_read)],
+    response_model=ClassroomResponse,
+)
 async def load_classroom(classroom_id: str, perm_subject_domain: tuple = Depends(get_subject_domain)):
     try:
         db = Handle(perm_subject=perm_subject_domain[0], perm_domain=perm_subject_domain[1])
@@ -54,7 +73,11 @@ async def load_classroom(classroom_id: str, perm_subject_domain: tuple = Depends
         raise HTTPException(status_code=401, detail="not_allowed")
 
 
-@router.get("/videos/classrooms/{classroom_id}/playsets", dependencies=[Depends(verify_token), Depends(can_read)], response_model=PlaysetListResponse)
+@router.get(
+    "/videos/classrooms/{classroom_id}/playsets",
+    dependencies=[Depends(verify_token), Depends(can_read)],
+    response_model=PlaysetListResponse,
+)
 async def load_classroom_playsets(classroom_id: str, perm_subject_domain: tuple = Depends(get_subject_domain)):
     try:
         db = Handle(perm_subject=perm_subject_domain[0], perm_domain=perm_subject_domain[1])
@@ -65,7 +88,9 @@ async def load_classroom_playsets(classroom_id: str, perm_subject_domain: tuple 
 
 
 @router.get(
-    "/videos/classrooms/{classroom_id}/playset_by_name/{name}", dependencies=[Depends(verify_token), Depends(can_read)], response_model=PlaysetResponse
+    "/videos/classrooms/{classroom_id}/playset_by_name/{name}",
+    dependencies=[Depends(verify_token), Depends(can_read)],
+    response_model=PlaysetResponse,
 )
 async def load_playset_by_name(classroom_id: str, name: str, perm_subject_domain: tuple = Depends(get_subject_domain)):
     try:
@@ -81,7 +106,9 @@ async def load_playset_by_name(classroom_id: str, name: str, perm_subject_domain
 
 
 @router.get(
-    "/videos/classrooms/{classroom_id}/playsets_by_date/{date}", dependencies=[Depends(verify_token), Depends(can_read)], response_model=PlaysetListResponse
+    "/videos/classrooms/{classroom_id}/playsets_by_date/{date}",
+    dependencies=[Depends(verify_token), Depends(can_read)],
+    response_model=PlaysetListResponse,
 )
 async def load_playsets_by_date(classroom_id: str, date: str, perm_subject_domain: tuple = Depends(get_subject_domain)):
     try:
@@ -112,7 +139,7 @@ async def create_playset(playset: Playset, perm_subject_domain: tuple = Depends(
                 logging.error(err)
                 return
 
-            await db.create_classroom(Classroom(id=environment['environment_id'], name=environment['name']))
+            await db.create_classroom(Classroom(id=environment["environment_id"], name=environment["name"]))
 
         return await db.create_playset(playset)
     except PermissionException as e:
@@ -136,7 +163,9 @@ async def delete_playset(playset_id: str, perm_subject_domain: tuple = Depends(g
 
 
 @router.post(
-    "/videos/playsets/{playset_id}/videos", dependencies=[Depends(verify_token), Depends(can_write)], response_model=VideoResponse
+    "/videos/playsets/{playset_id}/videos",
+    dependencies=[Depends(verify_token), Depends(can_write)],
+    response_model=VideoResponse,
 )
 async def create_video(playset_id: str, video: Video, perm_subject_domain: tuple = Depends(get_subject_domain)):
     try:
@@ -149,7 +178,9 @@ async def create_video(playset_id: str, video: Video, perm_subject_domain: tuple
 
 
 @router.get("/videos/{classroom_id}/{playest_name}/{filename}", dependencies=[Depends(verify_token), Depends(can_read)])
-async def videos_root(classroom_id: str, playest_name: str, filename: str, perm_subject_domain: tuple = Depends(get_subject_domain)):
+async def videos_root(
+    classroom_id: str, playest_name: str, filename: str, perm_subject_domain: tuple = Depends(get_subject_domain)
+):
     resp = await check_requests(
         [AuthRequest(sub=perm_subject_domain[0], dom=perm_subject_domain[1], obj=f"{classroom_id}:videos", act="read")]
     )
@@ -160,8 +191,17 @@ async def videos_root(classroom_id: str, playest_name: str, filename: str, perm_
     return FileResponse(Path(path).resolve())
 
 
-@router.get("/videos/{classroom_id}/{playest_name}/{camera_name}/{filename}", dependencies=[Depends(verify_token), Depends(can_read)])
-async def videos(classroom_id: str, playest_name: str, camera_name: str, filename: str, perm_subject_domain: tuple = Depends(get_subject_domain)):
+@router.get(
+    "/videos/{classroom_id}/{playest_name}/{camera_name}/{filename}",
+    dependencies=[Depends(verify_token), Depends(can_read)],
+)
+async def videos(
+    classroom_id: str,
+    playest_name: str,
+    camera_name: str,
+    filename: str,
+    perm_subject_domain: tuple = Depends(get_subject_domain),
+):
     resp = await check_requests(
         [AuthRequest(sub=perm_subject_domain[0], dom=perm_subject_domain[1], obj=f"{classroom_id}:videos", act="read")]
     )

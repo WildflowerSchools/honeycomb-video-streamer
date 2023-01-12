@@ -43,6 +43,7 @@ class PlaysetResponse(BaseModel):
 class PlaysetListResponse(BaseModel):
     playsets: List[PlaysetResponse]
 
+
 class Classroom(BaseModel):
     id: UUID
     name: str

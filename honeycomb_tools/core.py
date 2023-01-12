@@ -4,10 +4,7 @@ from typing import List
 
 from . import const, util
 from .honeycomb_service import HoneycombClient
-from .introspection import (
-    fetch_video_metadata_in_range,
-    process_video_metadata_for_download
-)
+from .introspection import fetch_video_metadata_in_range, process_video_metadata_for_download
 from .log import logger
 from .stream_service import client as stream_service_client, models
 from .transcode import (
@@ -30,7 +27,7 @@ def prepare_videos_for_environment_for_time_range(
     end: datetime.datetime,
     rewrite: bool = False,
     append: bool = False,
-    camera: List[str] = []
+    camera: List[str] = [],
 ):
     if rewrite:
         logger.warning("Rewrite flag enabled! All generated images/video will be recreated.")
@@ -42,7 +39,7 @@ def prepare_videos_for_environment_for_time_range(
     honeycomb_client = HoneycombClient()
 
     # load the environment to get all the assignments
-    environment_id = honeycomb_client.get_environment_by_name(environment_name).get('environment_id')
+    environment_id = honeycomb_client.get_environment_by_name(environment_name).get("environment_id")
     # add_classroom(video_directory, environment_name, environment_id)
 
     # prep this output's environment index.json manifest file
@@ -50,28 +47,19 @@ def prepare_videos_for_environment_for_time_range(
     output_dir = os.path.join(video_directory, environment_id, video_name)
 
     streaming_client = stream_service_client.StreamServiceClient()
-    playset = streaming_client.get_playset_by_name(
-        environment_id=environment_id,
-        playset_name=video_name
-    )
+    playset = streaming_client.get_playset_by_name(environment_id=environment_id, playset_name=video_name)
 
     if playset is not None:
         if rewrite is False:
-            logger.warning(f"Rewrite flag set to False and streamable video for environment '{environment_name}' with name '{video_name}' already exists")
+            logger.warning(
+                f"Rewrite flag set to False and streamable video for environment '{environment_name}' with name '{video_name}' already exists"
+            )
             return
         else:
-            streaming_client.delete_playset_by_name_if_exists(
-                environment_id=environment_id,
-                playset_name=video_name
-            )
+            streaming_client.delete_playset_by_name_if_exists(environment_id=environment_id, playset_name=video_name)
 
     playset = streaming_client.create_playset(
-        playset=models.Playset(
-            classroom_id=environment_id,
-            name=video_name,
-            start_time=start,
-            end_time=end
-        )
+        playset=models.Playset(classroom_id=environment_id, name=video_name, start_time=start, end_time=end)
     )
 
     # manifest_path = os.path.join(output_dir, "index.json")
@@ -229,18 +217,23 @@ def prepare_videos_for_environment_for_time_range(
                 if num_frames > 100:
                     trim_video(video_snippet_path, video_snippet_path)
 
-                fp.write(f"file 'file:{video_snippet_path}' duration 00:00:{util.format_frames(num_frames)} inpoint {util.vts(count)} outpoint {util.vts(count + num_frames)}\n")
+                fp.write(
+                    f"file 'file:{video_snippet_path}' duration 00:00:{util.format_frames(num_frames)} inpoint {util.vts(count)} outpoint {util.vts(count + num_frames)}\n"
+                )
 
                 current_video_history["files"].append(video_snippet_path)
-                if current_video_history["end_time"] is None or \
-                    file["end"] > util.str_to_date(current_video_history["end_time"]):
+                if current_video_history["end_time"] is None or file["end"] > util.str_to_date(
+                    current_video_history["end_time"]
+                ):
                     current_video_history["end_time"] = util.date_to_video_history_format(file["end"])
 
                 count += num_frames
             fp.flush()
 
         if len(current_video_history["files"]) > 0:
-            concat_videos(input_path=current_input_files_path, output_path=video_out_path, thumb_path=thumb_out_path, rewrite=True)
+            concat_videos(
+                input_path=current_input_files_path, output_path=video_out_path, thumb_path=thumb_out_path, rewrite=True
+            )
             logger.info("Generated: {}".format(video_out_path))
 
         if len(current_video_history["files"]) > 0:
@@ -298,4 +291,4 @@ def prepare_videos_for_environment_for_time_range(
         #         cls=util.DateTimeEncoder,
         #     )
         #     fp.flush()
-            # done
+        # done

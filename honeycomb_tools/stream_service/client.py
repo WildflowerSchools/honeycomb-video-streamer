@@ -16,12 +16,16 @@ from . import models
 
 
 class StreamServiceClient(object):
-    def __init__(self,
-                 url=os.getenv("VIDEO_STREAM_SERVICE_URI", None),
-                 auth_domain: str = os.getenv("AUTH0_DOMAIN", "wildflowerschools.auth0.com"),
-                 auth_client_id: str = os.getenv("AUTH0_CLIENT_ID", None),
-                 auth_client_secret: str = os.getenv("AUTH0_CLIENT_SECRET", None),
-                 auth_audience: str = os.getenv("VIDEO_STREAM_SERVICE_AUDIENCE", os.getenv("API_AUDIENCE", "wildflower-tech.org"))):
+    def __init__(
+        self,
+        url=os.getenv("VIDEO_STREAM_SERVICE_URI", None),
+        auth_domain: str = os.getenv("AUTH0_DOMAIN", "wildflowerschools.auth0.com"),
+        auth_client_id: str = os.getenv("AUTH0_CLIENT_ID", None),
+        auth_client_secret: str = os.getenv("AUTH0_CLIENT_SECRET", None),
+        auth_audience: str = os.getenv(
+            "VIDEO_STREAM_SERVICE_AUDIENCE", os.getenv("API_AUDIENCE", "wildflower-tech.org")
+        ),
+    ):
         self.url = url
 
         self.domain = auth_domain
@@ -38,7 +42,9 @@ class StreamServiceClient(object):
         if self.client_secret is None:
             raise ValueError("StreamServiceClient 'auth_client_secret' is not optional, set with AUTH0_CLIENT_SECRET")
         if self.audience is None:
-            raise ValueError("StreamServiceClient 'auth_audience' is not optional, set with VIDEO_STREAM_SERVICE_AUDIENCE")
+            raise ValueError(
+                "StreamServiceClient 'auth_audience' is not optional, set with VIDEO_STREAM_SERVICE_AUDIENCE"
+            )
 
         self.session = self._request_session()
 
@@ -52,10 +58,7 @@ class StreamServiceClient(object):
         session = requests.Session()
         adapter = HTTPAdapter(
             max_retries=Retry(
-                total=4,
-                backoff_factor=1.5,
-                allowed_methods=None,
-                status_forcelist=[429, 500, 502, 503, 504]
+                total=4, backoff_factor=1.5, allowed_methods=None, status_forcelist=[429, 500, 502, 503, 504]
             )
         )
         session.mount("http://", adapter)
@@ -67,21 +70,17 @@ class StreamServiceClient(object):
         token = self.auth0_token_generator.client_credentials(
             client_id=self.client_id,
             client_secret=self.client_secret,
-            audience=self.audience if self.audience is not None else f'https://{self.domain}/api/v2/'
+            audience=self.audience if self.audience is not None else f"https://{self.domain}/api/v2/",
         )
 
-        self.access_token = token['access_token']
+        self.access_token = token["access_token"]
 
     def _request(self, method="GET", path="/", params={}, body=None):
         headers = {"Authorization": f"Bearer {self.access_token}"}
 
         try:
             response = self.session.request(
-                url=urljoin(self.url, path),
-                method=method,
-                headers=headers,
-                params=params,
-                data=body
+                url=urljoin(self.url, path), method=method, headers=headers, params=params, data=body
             )
             response.raise_for_status()
             return response.json()
@@ -96,34 +95,18 @@ class StreamServiceClient(object):
             logger.error(e)
             raise e
 
-
     def _get(self, path="/", params={}):
-        return self._request(
-            path=path,
-            params=params
-        )
+        return self._request(path=path, params=params)
 
     def _post(self, path="/", params={}, body=None):
-        return self._request(
-            path=path,
-            method="POST",
-            params=params,
-            body=body
-        )
+        return self._request(path=path, method="POST", params=params, body=body)
 
     def _delete(self, path="/", params={}, body=None):
-        return self._request(
-            path=path,
-            method="DELETE",
-            params=params,
-            body=body
-        )
+        return self._request(path=path, method="DELETE", params=params, body=body)
 
     def get_playsets_by_date(self, environment_id, date) -> List[models.PlaysetResponse]:
         try:
-            response = self._get(
-                path=f"/videos/classrooms/{environment_id}/playsets_by_date/{date}"
-            )
+            response = self._get(path=f"/videos/classrooms/{environment_id}/playsets_by_date/{date}")
             return models.PlaysetListResponse(**response).playsets
         except HTTPError as e:
             if e.response.status_code == 404:
@@ -131,27 +114,19 @@ class StreamServiceClient(object):
 
     def get_playset_by_name(self, environment_id, playset_name) -> Optional[models.PlaysetResponse]:
         try:
-            response = self._get(
-                path=f"/videos/classrooms/{environment_id}/playset_by_name/{playset_name}"
-            )
+            response = self._get(path=f"/videos/classrooms/{environment_id}/playset_by_name/{playset_name}")
             return models.PlaysetResponse(**response)
         except HTTPError as e:
             if e.response.status_code == 404:
                 return None
 
     def delete_playset_by_name_if_exists(self, environment_id, playset_name):
-        playset = self.get_playset_by_name(
-            environment_id=environment_id,
-            playset_name=playset_name
-        )
+        playset = self.get_playset_by_name(environment_id=environment_id, playset_name=playset_name)
         if playset is not None:
             self.delete_playset(playset_id=playset.id)
 
     def create_playset(self, playset: models.Playset) -> models.PlaysetResponse:
-        response = self._post(
-            path="/videos/playsets",
-            body=playset.json()
-        )
+        response = self._post(path="/videos/playsets", body=playset.json())
         return models.PlaysetResponse(**response)
 
     def delete_playset(self, playset_id: uuid.UUID):
@@ -160,8 +135,5 @@ class StreamServiceClient(object):
         )
 
     def add_video_to_playset(self, video: models.Video) -> models.VideoResponse:
-        response = self._post(
-            path=f"/videos/playsets/{video.playset_id}/videos",
-            body=video.json()
-        )
+        response = self._post(path=f"/videos/playsets/{video.playset_id}/videos", body=video.json())
         return models.VideoResponse(**response)
