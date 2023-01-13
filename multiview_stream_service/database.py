@@ -3,12 +3,12 @@ from typing import List, Optional
 
 from cachetools.func import ttl_cache
 from sqlalchemy import create_engine, select, insert, delete, or_
-from sqlalchemy import MetaData, Column, Table, String, ForeignKey, DateTime
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import sessionmaker
 from wf_fastapi_auth0.wf_permissions import check_requests, AuthRequest
 
+from . import schema
 from .models import (
-    ClassroomList,
+    ClassroomListResponse,
     Classroom,
     ClassroomResponse,
     Playset,
@@ -19,37 +19,32 @@ from .models import (
 )
 
 
-engine = create_engine(os.environ.get("DATABASE_URI"))
+class Database(object):
+    __instance = None
 
-metadata = MetaData()
-classrooms_tbl = Table(
-    "classroom",
-    metadata,
-    Column("id", UUID(as_uuid=True), primary_key=True),
-    Column("name", String(16), nullable=False),
-)
+    def __new__(cls, *args, **kwargs):
+        if cls.__instance is None:
+            cls.__instance = super().__new__(cls)
+        return cls.__instance
 
-playsets_tbl = Table(
-    "playset",
-    metadata,
-    Column("id", UUID(as_uuid=True), primary_key=True, nullable=False),
-    Column("classroom_id", UUID(as_uuid=True), ForeignKey("classroom.id"), nullable=False),
-    Column("name", String(), nullable=True),
-    Column("start_time", DateTime(), nullable=True),
-    Column("end_time", DateTime(), nullable=True),
-)
+    def __init__(self, uri=os.environ.get("DATABASE_URI")):
+        self.engine = create_engine(uri)
+        self._create_schema()
 
-videos_tbl = Table(
-    "video",
-    metadata,
-    Column("id", UUID(as_uuid=True), primary_key=True, nullable=False),
-    Column("playset_id", UUID(as_uuid=True), ForeignKey("playset.id", ondelete="CASCADE"), nullable=False),
-    Column("device_id", UUID(as_uuid=True), nullable=True),
-    Column("device_name", String(), nullable=True),
-    Column("preview_url", String(), nullable=True),
-    Column("preview_thumbnail_url", String(), nullable=True),
-    Column("url", String(), nullable=True),
-)
+        self._session_maker = self._create_session_maker()
+
+    def _create_schema(self):
+        schema.metadata.create_all(self.engine)
+
+    def _create_session_maker(self):
+        return sessionmaker(autocommit=True, autoflush=False, bind=self.engine)
+
+    def get_session(self):
+        db = self._session_maker()
+        try:
+            yield db
+        finally:
+            db.close()
 
 
 class PermissionException(Exception):
@@ -70,23 +65,20 @@ class PermissionException(Exception):
 # )
 
 
-metadata.create_all(engine)
-
-
 class Handle(object):
     # For unrestricted acccess, use:
     #    perm_subject="wildflower-robots@wildflower-tech.org"
     #    perm_domain="wildflowerschools.org"
-    def __init__(self, perm_subject, perm_domain):
-        self.connection = engine.connect()
+    def __init__(self, db_session, perm_subject, perm_domain):
+        self.db_session = db_session
 
         self.permission_subject = perm_subject
         self.permission_domain = perm_domain
 
-    def __del__(self):
-        self.connection.close()
+    # def __del__(self):
+    #     self.connection.close()
 
-    async def has_read_permission(self, environment_id):
+    async def has_read_permission(self, environment_id) -> bool:
         resp = await check_requests(
             [
                 AuthRequest(
@@ -96,7 +88,7 @@ class Handle(object):
         )
         return resp[0]["allow"]
 
-    async def has_write_permission(self, environment_id):
+    async def has_write_permission(self, environment_id) -> bool:
         resp = await check_requests(
             [
                 AuthRequest(
@@ -106,7 +98,7 @@ class Handle(object):
         )
         return resp[0]["allow"]
 
-    async def has_delete_permission(self, environment_id):
+    async def has_delete_permission(self, environment_id) -> bool:
         resp = await check_requests(
             [
                 AuthRequest(
@@ -119,14 +111,14 @@ class Handle(object):
         )
         return resp[0]["allow"]
 
-    async def get_classrooms(self) -> ClassroomList:
-        result = ClassroomList()
+    async def get_classrooms(self) -> ClassroomListResponse:
+        result = ClassroomListResponse()
         result.classrooms = []
 
-        s = select(classrooms_tbl.c.id, classrooms_tbl.c.name)
-        results = self.connection.execute(s)
+        s = select(schema.classrooms_tbl.c.id, schema.classrooms_tbl.c.name)
+        results = self.db_session.execute(s)
         for row in results:
-            c = Classroom(**row)
+            c = ClassroomResponse(**row)
             if await self.has_read_permission(c.id):
                 result.classrooms.append(c)
 
@@ -136,8 +128,8 @@ class Handle(object):
         if not await self.has_write_permission(classroom.id):
             raise PermissionException(f"User does not have write permission for classroom '{classroom.id}'")
 
-        response = self.connection.execute(
-            insert(classrooms_tbl).values(id=classroom.id, name=classroom.name).returning(classrooms_tbl)
+        response = self.db_session.execute(
+            insert(schema.classrooms_tbl).values(id=classroom.id, name=classroom.name).returning(schema.classrooms_tbl)
         )
         return ClassroomResponse(**dict(response.first()))
 
@@ -146,15 +138,15 @@ class Handle(object):
         if not await self.has_read_permission(classroom_id):
             raise PermissionException(f"User does not have read permission for classroom '{classroom_id}'")
 
-        classroom_records = self.connection.execute(select(classrooms_tbl).where(classrooms_tbl.c.id == classroom_id))
+        classroom_records = self.db_session.execute(select(schema.classrooms_tbl).where(schema.classrooms_tbl.c.id == classroom_id))
 
         if classroom_records is None or classroom_records.rowcount == 0:
             return None
 
         response = ClassroomResponse(**classroom_records.first())
         response.playsets = []
-        playset_records = self.connection.execute(
-            select(playsets_tbl).where(playsets_tbl.c.classroom_id == classroom_id)
+        playset_records = self.db_session.execute(
+            select(schema.playsets_tbl).where(schema.playsets_tbl.c.classroom_id == classroom_id)
         )
         for playset_record in playset_records:
             response.playsets.append(Playset(**dict(playset_record)))
@@ -164,8 +156,8 @@ class Handle(object):
         if not await self.has_write_permission(playset.classroom_id):
             raise PermissionException(f"User does not have read permission for classroom '{playset.classroom_id}'")
 
-        response = self.connection.execute(
-            insert(playsets_tbl)
+        response = self.db_session.execute(
+            insert(schema.playsets_tbl)
             .values(
                 id=playset.id,
                 classroom_id=playset.classroom_id,
@@ -173,7 +165,7 @@ class Handle(object):
                 start_time=playset.start_time,
                 end_time=playset.end_time,
             )
-            .returning(playsets_tbl)
+            .returning(schema.playsets_tbl)
         )
         return PlaysetResponse(**dict(response.first()))
 
@@ -182,8 +174,8 @@ class Handle(object):
         if not await self.has_read_permission(classroom_id):
             raise PermissionException(f"User does not have read permission for classroom '{classroom_id}'")
 
-        playset_records = self.connection.execute(
-            select(playsets_tbl).where(playsets_tbl.c.classroom_id == classroom_id)
+        playset_records = self.db_session.execute(
+            select(schema.playsets_tbl).where(schema.playsets_tbl.c.classroom_id == classroom_id)
         )
         if playset_records is None or playset_records.rowcount == 0:
             return None
@@ -192,8 +184,8 @@ class Handle(object):
         for playset_record in playset_records:
             response = PlaysetResponse(**dict(playset_record))
             response.videos = []
-            video_records = self.connection.execute(
-                select(videos_tbl).where(videos_tbl.c.playset_id == str(response.id))
+            video_records = self.db_session.execute(
+                select(schema.videos_tbl).where(schema.videos_tbl.c.playset_id == str(response.id))
             )
             for video_record in video_records:
                 response.videos.append(Video(**video_record))
@@ -204,7 +196,7 @@ class Handle(object):
 
     @ttl_cache(300)
     async def get_playset(self, playset_id) -> Optional[PlaysetResponse]:
-        playset_records = self.connection.execute(select(playsets_tbl).where(playsets_tbl.c.id == playset_id))
+        playset_records = self.db_session.execute(select(schema.playsets_tbl).where(schema.playsets_tbl.c.id == playset_id))
         if playset_records is None or playset_records.rowcount == 0:
             return None
 
@@ -216,8 +208,8 @@ class Handle(object):
             )
 
         playset_response.videos = []
-        video_records = self.connection.execute(
-            select(videos_tbl).where(videos_tbl.c.playset_id == str(playset_response.id))
+        video_records = self.db_session.execute(
+            select(schema.videos_tbl).where(schema.videos_tbl.c.playset_id == str(playset_response.id))
         )
         for video_record in video_records:
             playset_response.videos.append(VideoResponse(**dict(video_record)))
@@ -229,9 +221,9 @@ class Handle(object):
         if not await self.has_read_permission(classroom_id):
             raise PermissionException(f"User does not have read permission for classroom '{classroom_id}'")
 
-        playset_records = self.connection.execute(
-            select(playsets_tbl).where(
-                playsets_tbl.c.classroom_id == classroom_id, or_(playsets_tbl.c.name == playset_name)
+        playset_records = self.db_session.execute(
+            select(schema.playsets_tbl).where(
+                schema.playsets_tbl.c.classroom_id == classroom_id, or_(schema.playsets_tbl.c.name == playset_name)
             )
         )
         if playset_records is None or playset_records.rowcount == 0:
@@ -239,8 +231,8 @@ class Handle(object):
 
         playset_response = PlaysetResponse(**playset_records.first())
         playset_response.videos = []
-        video_records = self.connection.execute(
-            select(videos_tbl).where(videos_tbl.c.playset_id == str(playset_response.id))
+        video_records = self.db_session.execute(
+            select(schema.videos_tbl).where(schema.videos_tbl.c.playset_id == str(playset_response.id))
         )
         for video_record in video_records:
             playset_response.videos.append(VideoResponse(**dict(video_record)))
@@ -252,10 +244,10 @@ class Handle(object):
         if not await self.has_read_permission(classroom_id):
             raise PermissionException(f"User does not have read permission for classroom '{classroom_id}'")
 
-        playset_records = self.connection.execute(
-            select(playsets_tbl).where(
-                playsets_tbl.c.classroom_id == classroom_id,
-                or_(playsets_tbl.c.start_time == playset_date, playsets_tbl.c.end_time == playset_date),
+        playset_records = self.db_session.execute(
+            select(schema.playsets_tbl).where(
+                schema.playsets_tbl.c.classroom_id == classroom_id,
+                or_(schema.playsets_tbl.c.start_time == playset_date, schema.playsets_tbl.c.end_time == playset_date),
             )
         )
         if playset_records is None or playset_records.rowcount == 0:
@@ -265,8 +257,8 @@ class Handle(object):
         for playset_record in playset_records:
             response = PlaysetResponse(playset_record)
             response.videos = []
-            video_records = self.connection.execute(
-                select(videos_tbl).where(videos_tbl.c.playset_id == str(response.id))
+            video_records = self.db_session.execute(
+                select(schema.videos_tbl).where(schema.videos_tbl.c.playset_id == str(response.id))
             )
             for video_record in video_records:
                 response.videos.append(Video(**video_record))
@@ -281,7 +273,7 @@ class Handle(object):
         if not await self.has_delete_permission(playset.classroom_id):
             raise PermissionException(f"User does not have delete permission for classroom '{playset.classroom_id}'")
 
-        response = self.connection.execute(delete(playsets_tbl).where(playsets_tbl.c.id == playset_id))
+        response = self.db_session.execute(delete(schema.playsets_tbl).where(schema.playsets_tbl.c.id == playset_id))
         return response.rowcount > 0
 
     async def create_video(self, video: Video) -> VideoResponse:
@@ -290,8 +282,8 @@ class Handle(object):
         if not await self.has_write_permission(playset.classroom_id):
             raise PermissionException(f"User does not have write permission for classroom '{playset.classroom_id}'")
 
-        response = self.connection.execute(
-            insert(videos_tbl)
+        response = self.db_session.execute(
+            insert(schema.videos_tbl)
             .values(
                 id=video.id,
                 playset_id=video.playset_id,
@@ -301,6 +293,6 @@ class Handle(object):
                 preview_thumbnail_url=video.preview_thumbnail_url,
                 url=video.url,
             )
-            .returning(videos_tbl)
+            .returning(schema.videos_tbl)
         )
         return VideoResponse(**dict(response.first()))

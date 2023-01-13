@@ -68,5 +68,5 @@ class ClassroomResponse(BaseModel):
     playsets: Optional[List[Playset]]
 
 
-class ClassroomList(BaseModel):
-    classrooms: Optional[List[Classroom]] = []
+class ClassroomListResponse(BaseModel):
+    classrooms: Optional[List[ClassroomResponse]] = []

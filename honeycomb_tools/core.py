@@ -45,6 +45,7 @@ def prepare_videos_for_environment_for_time_range(
     # prep this output's environment index.json manifest file
     # this index will point to each camera's HLS and thumbnail assets
     output_dir = os.path.join(video_directory, environment_id, video_name)
+    os.makedirs(output_dir, exist_ok=True)
 
     streaming_client = stream_service_client.StreamServiceClient()
     playset = streaming_client.get_playset_by_name(environment_id=environment_id, playset_name=video_name)
@@ -63,7 +64,6 @@ def prepare_videos_for_environment_for_time_range(
     )
 
     # manifest_path = os.path.join(output_dir, "index.json")
-    os.makedirs(os.path.dirname(output_dir), exist_ok=True)
 
     empty_clip_path = const.empty_clip_path(output_dir)
     copy_technical_difficulties_clip(clip_path=empty_clip_path, output_path=empty_clip_path, rewrite=rewrite)
@@ -243,8 +243,8 @@ def prepare_videos_for_environment_for_time_range(
 
             # camera_video_history.append(current_video_history)
 
-            generate_preview_image(hls_out, preview_image_out)
-            generate_preview_image(hls_thumb_out, preview_image_thumb_out)
+            generate_preview_image(video_out_path, preview_image_out)
+            generate_preview_image(thumb_out_path, preview_image_thumb_out)
 
         current_video = models.Video(
             playset_id=playset.id,

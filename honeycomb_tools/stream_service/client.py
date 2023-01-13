@@ -127,6 +127,9 @@ class StreamServiceClient(object):
 
     def create_playset(self, playset: models.Playset) -> models.PlaysetResponse:
         response = self._post(path="/videos/playsets", body=playset.json())
+        if response is None:
+            raise ValueError("Failed creating playset, server responded with None")
+
         return models.PlaysetResponse(**response)
 
     def delete_playset(self, playset_id: uuid.UUID):

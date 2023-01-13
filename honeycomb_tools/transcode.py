@@ -188,6 +188,7 @@ def prepare_hls(input_path, output_path, hls_time=10, rewrite=False, append=True
 
 
 def generate_preview_image(input_path, output_path, rewrite=False):
+    input_fps = 10
     preview_exists = os.path.exists(output_path)
 
     if preview_exists:
@@ -198,7 +199,17 @@ def generate_preview_image(input_path, output_path, rewrite=False):
     # ffmpeg -y -i ./public/videos/test/cc-1/output.m3u8 -f image2 -vframes 1
     # preview.jpg
     if not preview_exists:
-        ffmpeg.input(input_path).output(output_path, format="image2", vframes=1).run()
+        ss = 0
+        try:
+            frames = count_frames(input_path)
+            ss = round(frames/2/input_fps)
+        except ValueError as e:
+            logger.error(e)
+
+        if ss > 0:
+            ffmpeg.input(input_path, ss=ss).output(output_path, format="image2", vframes=1).run()
+        else:
+            logger.warning(f"Could not generate preview image for '{input_path}', file appears empty or corrupted")
     else:
         logger.info("preview image '{}' already exists".format(output_path))
 

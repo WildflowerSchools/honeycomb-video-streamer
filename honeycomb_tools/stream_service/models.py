@@ -15,7 +15,7 @@ class Video(BaseModel):
 
 
 class VideoResponse(BaseModel):
-    id: UUID = Field(default_factory=uuid4)
+    id: UUID
     playset_id: UUID
     device_id: UUID
     device_name: str
@@ -32,7 +32,7 @@ class Playset(BaseModel):
 
 
 class PlaysetResponse(BaseModel):
-    id: UUID = Field(default_factory=uuid4)
+    id: UUID
     classroom_id: UUID
     name: str
     start_time: datetime.datetime
