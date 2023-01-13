@@ -37,6 +37,33 @@ Then install packages:
       cp ./video_prepare/.env.template ./video_prepare/.env
 
 * Update ENV vars as needed
+
+#### Run via Docker:
+
+* Build all video-streamer services and stand up the streaming DB + API service
+
+      just build
+      just docker-run-streaming-service
+
+
+* Run the video prepare job (this example fetches video for greenbrier on 5/27/2021):
+
+      docker run -ti \
+        --rm \
+        --volume $(pwd)/public/videos:/data/videos \
+        --network honeycomb-video-streamer_default \
+        --env-file ./video_prepare/.env \
+        --env ENVIRONMENT_NAME=greenbrier \
+        --env VIDEO_NAME=2021-05-27 \
+        --env START_TIME=2021-05-27T09:00-0600 \
+        --env END_TIME=2021-05-27T09:10-0600 \
+        --env REWRITE=true \
+        --env VIDEO_STREAM_SERVICE_URI=http://streamer:8000 \
+        honeycomb-video-streamer-prepare:latest
+
+
+#### Run locally:
+
 * Run: `just install-dev`
 * Run (this example fetches video for greenbrier on 5/27/2021):
 

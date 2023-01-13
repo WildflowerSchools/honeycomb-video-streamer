@@ -35,3 +35,7 @@ services:
 
 volumes:
   postgres_db:
+
+networks:
+  default:
+    name: honeycomb-video-streamer_default

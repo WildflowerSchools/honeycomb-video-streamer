@@ -139,9 +139,7 @@ RUN poetry lock && \
     poetry export -f requirements.txt --without dev | pip install -r /dev/stdin
 
 RUN mkdir -p /app/video_prepare
-COPY video_prepare/README.md /app/video_prepare
-COPY video_prepare/*.py /app/video_prepare/
-COPY video_prepare/assets/ /app/video_prepare/assets
+COPY video_prepare/ /app/video_prepare/
 COPY scripts/ /app
 
 CMD sh /app/prepare-volume.sh
