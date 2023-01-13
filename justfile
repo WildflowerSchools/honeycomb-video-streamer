@@ -8,7 +8,7 @@ fmt:
     black ./video_streaming_service/
 
 install-dev:
-    pip install -e .[development]
+    poetry install
 
 _build-docker-service:
     @docker-compose -f stack.yml build
