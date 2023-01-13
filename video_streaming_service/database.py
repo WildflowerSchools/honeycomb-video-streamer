@@ -1,5 +1,5 @@
 import os
-from typing import List, Optional
+from typing import Optional
 
 from cachetools.func import ttl_cache
 from sqlalchemy import create_engine, select, insert, delete, or_
@@ -19,10 +19,10 @@ from .models import (
 )
 
 
-class Database(object):
+class Database:
     __instance = None
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls):
         if cls.__instance is None:
             cls.__instance = super().__new__(cls)
         return cls.__instance
@@ -65,7 +65,7 @@ class PermissionException(Exception):
 # )
 
 
-class Handle(object):
+class Handle:
     # For unrestricted acccess, use:
     #    perm_subject="wildflower-robots@wildflower-tech.org"
     #    perm_domain="wildflowerschools.org"

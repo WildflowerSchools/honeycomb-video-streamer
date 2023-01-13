@@ -1,41 +1,33 @@
 version := "test"
 
-environment_name := "greenbrier"
-output_path := "public/videos"
-output_name := "2021-05-28"
-start := "2021-05-28T13:00"
-end := "2021-05-28T17:00"
-
 system-info:
     @echo "system info: {{ os() }} ({{ os_family() }}) on {{arch()}}".
 
 fmt:
-    black ./honeycomb_tools/
-    black ./multiview_stream_service/
+    black ./video_prepare/
+    black ./video_streaming_service/
 
 install-dev:
     pip install -e .[development]
 
 _build-docker-service:
-    @docker build -t wildflowerschools/honeycomb-video-streamer:{{version}} -f Dockerfile .
+    @docker-compose -f stack.yml build
 
 _build-docker-prepare:
     @docker buildx build --build-arg TAG={{version}} -t wildflowerschools/honeycomb-video-streamer:prepare-{{version}} --platform linux/arm64 --cache-from=type=local,src=/tmp/buildx-cache --cache-to=type=local,dest=/tmp/buildx-cache -f Prepare.Dockerfile --load .
 
-build-docker: _build-docker-service _build-docker-prepare
+build: _build-docker-service _build-docker-prepare
 
+docker-run-streamer:
+    @docker-compose -f stack.yml up -d --build
 
-prepare-videos:
-    @python -m honeycomb_tools prepare-videos-for-environment-for-time-range --environment_name {{environment_name}} --output_path {{output_path}} --output_name {{output_name}} --start {{start}} --end {{end}}
+lint-streaming-service:
+    @pylint video_streaming_service
 
-list-datapoints:
-    @python -m honeycomb_tools list-datapoints-for-environment-for-time-range --environment_name {{environment_name}} --output_path ./ --output_name datapoints.csv --start {{start}} --end {{end}}
+lint-prepare-service:
+    @pylint video_prepare
 
-lint-app:
-    @pylint multiview_stream_service
+lint: lint-streaming-service lint-prepare-service
 
-start-app: lint-app
-    @uvicorn multiview_stream_service:app --reload --port 8005
-
-start-postgres:
-    @docker run -it -p 5432:5432 -e POSTGRES_PASSWORD=mysecretpassword -e POSTGRES_DB=multiview -e POSTGRES_USER=pollu postgres
+start-streaming-service:
+    @uvicorn video_streaming_service:app --reload --port 8000

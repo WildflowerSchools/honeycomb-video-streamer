@@ -11,6 +11,6 @@ COPY pyproject.toml setup.py /app/
 RUN poetry lock && \
     poetry export -f requirements.txt --without dev | pip install -r /dev/stdin
 
-COPY multiview_stream_service/ /app/multiview_stream_service/
+COPY video_streaming_service/ /app/video_streaming_service/
 
-CMD python -m multiview_stream_service
+CMD python -m video_streaming_service

@@ -47,6 +47,10 @@ pytest = "^7.2.0"
 line-length = 120
 target-version = ['py38']
 
+[tool.pylint]
+[tool.pylint.messages-control]
+##disable=["logging-fstring-interpolation"]
+
 [tool.setuptools]
 py-modules = []
 

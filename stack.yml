@@ -31,7 +31,7 @@ services:
     volumes:
       - "./public/videos:/app/public/videos"
     env_file:
-      - "./.docker.env"
+      - ".env"
 
 volumes:
   postgres_db:

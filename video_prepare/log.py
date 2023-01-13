@@ -3,18 +3,18 @@ import os
 import sys
 
 
-class Logger(object):
+class Logger:
     def __init__(self):
-        logger = logging.getLogger()
-        logger.setLevel(os.getenv("LOG_LEVEL", logging.INFO))
+        _logger = logging.getLogger()
+        _logger.setLevel(os.getenv("LOG_LEVEL", logging.INFO))
 
         formatter = logging.Formatter("%(asctime)s %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
         handler = logging.StreamHandler(sys.stdout)
         handler.setFormatter(formatter)
 
-        logger.addHandler(handler)
+        _logger.addHandler(handler)
 
-        self._logger = logger
+        self._logger = _logger
 
     def logger(self):
         return self._logger

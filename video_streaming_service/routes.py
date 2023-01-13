@@ -65,7 +65,7 @@ async def load_classroom_list(
         return await db.get_classrooms()
     except PermissionException as e:
         logging.error(e)
-        raise HTTPException(status_code=401, detail="not_allowed")
+        raise HTTPException(status_code=401, detail="not_allowed") from e
 
 
 @router.get(
@@ -83,7 +83,7 @@ async def load_classroom(
         return await db.get_classroom(classroom_id)
     except PermissionException as e:
         logging.error(e)
-        raise HTTPException(status_code=401, detail="not_allowed")
+        raise HTTPException(status_code=401, detail="not_allowed") from e
 
 
 @router.get(
@@ -101,7 +101,7 @@ async def load_classroom_playsets(
         return await db.get_playsets(classroom_id)
     except PermissionException as e:
         logging.error(e)
-        raise HTTPException(status_code=401, detail="not_allowed")
+        raise HTTPException(status_code=401, detail="not_allowed") from e
 
 
 @router.get(
@@ -124,7 +124,7 @@ async def load_playset_by_name(
         return result
     except PermissionException as e:
         logging.error(e)
-        raise HTTPException(status_code=401, detail="not_allowed")
+        raise HTTPException(status_code=401, detail="not_allowed") from e
 
 
 @router.get(
@@ -147,7 +147,7 @@ async def load_playsets_by_date(
         return result
     except PermissionException as e:
         logging.error(e)
-        raise HTTPException(status_code=401, detail="not_allowed")
+        raise HTTPException(status_code=401, detail="not_allowed") from e
 
 
 @router.post(
@@ -165,7 +165,7 @@ async def create_playset(
         if classroom is None:
             try:
                 environment = honeycomb_client.get_environment_by_id(environment_id=str(playset.classroom_id))
-            except Exception as e:
+            except Exception:
                 err = f"Classroom/environment ID ('{playset.classroom_id}') not found"
                 logging.error(err)
                 return
@@ -175,7 +175,7 @@ async def create_playset(
         return await db.create_playset(playset)
     except PermissionException as e:
         logging.error(e)
-        raise HTTPException(status_code=401, detail="not_allowed")
+        raise HTTPException(status_code=401, detail="not_allowed") from e
 
 
 @router.delete(
@@ -188,11 +188,11 @@ async def delete_playset(
         db = Handle(db_session=db_session, perm_subject=perm_subject_domain[0], perm_domain=perm_subject_domain[1])
         if await db.delete_playset(playset_id):
             return
-        else:
-            raise HTTPException(status_code=404, detail="not_found")
+
+        raise HTTPException(status_code=404, detail="not_found")
     except PermissionException as e:
         logging.error(e)
-        raise HTTPException(status_code=401, detail="not_allowed")
+        raise HTTPException(status_code=401, detail="not_allowed") from e
 
 
 @router.post(
@@ -212,7 +212,7 @@ async def create_video(
         return await db.create_video(video)
     except PermissionException as e:
         logging.error(e)
-        raise HTTPException(status_code=401, detail="not_allowed")
+        raise HTTPException(status_code=401, detail="not_allowed") from e
 
 
 @router.get("/videos/{classroom_id}/{playest_name}/{filename}", dependencies=[Depends(verify_token), Depends(can_read)])

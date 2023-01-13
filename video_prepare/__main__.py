@@ -4,19 +4,19 @@ import pytz
 import click
 from dotenv import load_dotenv
 
+load_dotenv()
+
+
 from . import core
-from .honeycomb_service import *
+from .honeycomb_service import HoneycombClient
 from .introspection import fetch_video_metadata_in_range
 from .log import logger
-
-
-load_dotenv()
 
 
 cli_valid_date_formats = list(
     itertools.chain.from_iterable(
         map(
-            lambda d: ["{}".format(d), "{}%z".format(d), "{} %z".format(d), "{} %Z".format(d)],
+            lambda d: [f"{d}", f"{d}%z", f"{d} %z", f"{d} %Z"],
             ["%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M"],
         )
     )
@@ -26,18 +26,16 @@ cli_valid_date_formats = list(
 def cli_timezone_aware(ctx, param, value):
     if value.tzinfo is None:
         return value.replace(tzinfo=pytz.UTC)
-    else:
-        return value.astimezone(pytz.utc)
+
+    return value.astimezone(pytz.utc)
 
 
 @click.group()
-@click.pass_context
-def main(ctx):
-    ctx.ensure_object(dict)
+def main():
+    pass
 
 
 @main.command()
-@click.pass_context
 @click.option(
     "--environment_name",
     "-e",
@@ -68,21 +66,19 @@ def main(ctx):
     multiple=True,
     default=[],
 )
-def list_videos_for_environment_for_time_range(ctx, environment_name, output_path, output_name, start, end, camera):
+def list_videos_for_environment_for_time_range(environment_name, output_path, output_name, start, end, camera):
     # load the environment to get all the assignments
     honeycomb_client = HoneycombClient()
 
     environment_id = honeycomb_client.get_environment_by_name(environment_name).get("environment_id")
-    with open(f"{output_path}/{output_name}", "w") as output_fp:
-        output_fp.write(f"assignment_id,device_id,assigned_name,timestamp,data_id\n")
+    with open(f"{output_path}/{output_name}", "w", encoding="utf-8") as output_fp:
+        output_fp.write("assignment_id,device_id,assigned_name,timestamp,data_id\n")
         # evaluate the assignments to filter out non-camera assignments
         assignments = honeycomb_client.get_assignments(environment_id)
         for assignment_id, device_id, assigned_name in assignments:
             if len(camera) > 0:
                 if assignment_id not in camera and assigned_name not in camera:
-                    logger.info(
-                        "Skipping camera '{}:{}', not in supplied cameras param".format(assignment_id, assigned_name)
-                    )
+                    logger.info(f"Skipping camera '{assignment_id}:{assigned_name}', not in supplied cameras param")
                     continue
 
             video_metadata = list(
@@ -96,7 +92,6 @@ def list_videos_for_environment_for_time_range(ctx, environment_name, output_pat
 
 
 @main.command(name="prepare-videos-for-environment-for-time-range")
-@click.pass_context
 @click.option(
     "--environment_name",
     "-e",
@@ -145,7 +140,7 @@ def list_videos_for_environment_for_time_range(ctx, environment_name, output_pat
     default=[],
 )
 def prepare_videos_for_environment_for_time_range(
-    ctx, environment_name, video_directory, video_name, start, end, rewrite, append, camera
+    environment_name, video_directory, video_name, start, end, rewrite, append, camera
 ):
     core.prepare_videos_for_environment_for_time_range(
         environment_name=environment_name,

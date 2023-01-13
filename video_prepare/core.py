@@ -1,6 +1,6 @@
 import datetime
 import os
-from typing import List
+from typing import List, Optional
 
 from . import const, util
 from .honeycomb_service import HoneycombClient
@@ -27,8 +27,11 @@ def prepare_videos_for_environment_for_time_range(
     end: datetime.datetime,
     rewrite: bool = False,
     append: bool = False,
-    camera: List[str] = [],
+    camera: Optional[List[str]] = None,
 ):
+    if camera is None:
+        camera = []
+
     if rewrite:
         logger.warning("Rewrite flag enabled! All generated images/video will be recreated.")
     elif append:
@@ -56,8 +59,8 @@ def prepare_videos_for_environment_for_time_range(
                 f"Rewrite flag set to False and streamable video for environment '{environment_name}' with name '{video_name}' already exists"
             )
             return
-        else:
-            streaming_client.delete_playset_by_name_if_exists(environment_id=environment_id, playset_name=video_name)
+
+        streaming_client.delete_playset_by_name_if_exists(environment_id=environment_id, playset_name=video_name)
 
     playset = streaming_client.create_playset(
         playset=models.Playset(classroom_id=environment_id, name=video_name, start_time=start, end_time=end)
@@ -86,28 +89,24 @@ def prepare_videos_for_environment_for_time_range(
 
     # evaluate the assignments to filter out non-camera assignments
     assignments = honeycomb_client.get_assignments(environment_id)
-    for idx_ii, (assignment_id, device_id, assigned_name) in enumerate(assignments):
+    for _, (assignment_id, device_id, assigned_name) in enumerate(assignments):
         if len(camera) > 0:
             if assignment_id not in camera and device_id not in camera and assigned_name not in camera:
-                logger.info("Skipping camera '{}:{}', not in supplied cameras param".format(device_id, assigned_name))
+                logger.info(f"Skipping camera '{device_id}:{assigned_name}', not in supplied cameras param")
                 continue
 
         camera_specific_directory = os.path.join(output_dir, assigned_name)
         os.makedirs(camera_specific_directory, exist_ok=True)
 
         rewrite_current = rewrite
-        logger.info(
-            "Fetching video metadata for camera '{}:{}' - {} (start) - {} (end)".format(
-                device_id, assigned_name, start, end
-            )
-        )
+        logger.info(f"Fetching video metadata for camera '{device_id}:{assigned_name}' - {start} (start) - {end} (end)")
         video_metadata = list(
             fetch_video_metadata_in_range(environment_id=environment_id, device_id=device_id, start=start, end=end)
         )
 
-        logger.info("%s has %i videos between %s to %s", assigned_name, len(video_metadata), start, end)
+        logger.info(f"{assigned_name} has {len(video_metadata)} videos between {start} to {end}")
         if len(video_metadata) == 0:
-            logger.warning("No videos for assignment: '{}':{}".format(assignment_id, assigned_name))
+            logger.warning(f"No videos for assignment: '{assignment_id}':{assigned_name}")
 
         # fetch all of the videos for each camera, records are returned ordered by timestamp
         # missing clips are stored behind the "missing" attribute
@@ -180,9 +179,9 @@ def prepare_videos_for_environment_for_time_range(
         #                 if util.str_to_date(record["end_time"]) > util.str_to_date(last_end_time):
         #                     last_end_time = util.date_to_video_history_format(record["end_time"])
 
-        current_input_files_path = os.path.join(camera_specific_directory, f"m3u8_files.txt")
-        video_out_path = os.path.join(camera_specific_directory, f"output.mp4")
-        thumb_out_path = os.path.join(camera_specific_directory, f"output-small.mp4")
+        current_input_files_path = os.path.join(camera_specific_directory, "m3u8_files.txt")
+        video_out_path = os.path.join(camera_specific_directory, "output.mp4")
+        thumb_out_path = os.path.join(camera_specific_directory, "output-small.mp4")
 
         current_video_history = {
             "start_time": start,
@@ -195,7 +194,7 @@ def prepare_videos_for_environment_for_time_range(
         # already_processed_files = list(map(lambda x: x["files"], camera_video_history))
         # already_processed_files = list(itertools.chain(*already_processed_files))
 
-        with open(current_input_files_path, "w") as fp:
+        with open(current_input_files_path, "w", encoding="utf-8") as fp:
             count = 0
             for file in sorted(manifest.get_files(), key=lambda x: x["video_streamer_path"]):
                 video_snippet_path = file["video_streamer_path"]
@@ -207,7 +206,7 @@ def prepare_videos_for_environment_for_time_range(
                 logger.info(f"Preparing '{video_snippet_path}' for HLS generation...")
                 try:
                     num_frames = count_frames(video_snippet_path)
-                except Exception as err:
+                except Exception:
                     logger.warning(f"Unable to probe '{video_snippet_path}', replacing with empty video clip")
                     video_snippet_path = empty_clip_path
                     count_frames(video_snippet_path)
@@ -234,7 +233,7 @@ def prepare_videos_for_environment_for_time_range(
             concat_videos(
                 input_path=current_input_files_path, output_path=video_out_path, thumb_path=thumb_out_path, rewrite=True
             )
-            logger.info("Generated: {}".format(video_out_path))
+            logger.info(f"Generated: {video_out_path}")
 
         if len(current_video_history["files"]) > 0:
             # prepare videos for HLS streaming

@@ -1,7 +1,7 @@
 
-honeycomb_tools/.env
+video_prepare/.env
 
-honeycomb_tools/__pycache__/
+video_prepare/__pycache__/
 
 honeycomb_video_streamer.egg-info/
 
@@ -16,10 +16,9 @@ build/
 dist/
 venv/
 
-.docker.env
 .eggs
 .python-version
 
 .env
 
-multiview_stream_service/__pycache__/
+video_streaming_service/__pycache__/

@@ -1,11 +1,7 @@
 from datetime import datetime, timedelta
-import os
-import os.path
-import pytz
-import shutil
-import tempfile
 
 import pandas as pd
+import pytz
 import video_io
 
 from .manifest import Manifest

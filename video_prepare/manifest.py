@@ -10,7 +10,7 @@ from . import util
 from .log import logger
 
 
-class Manifest(object):
+class Manifest:
     def __init__(self, output_directory="", empty_clip_path=""):
         self.captured_video_list = []
         self.missing_video_list = []
@@ -75,9 +75,7 @@ class Manifest(object):
                 try:
                     shutil.move(downloaded_file["video_local_path"], downloaded_file["video_streamer_path"])
                 except Exception as ex:
-                    err = "Failed copying downloaded video '{}' to final storage path '{}'".format(
-                        downloaded_file["video_local_path"], downloaded_file["video_streamer_path"]
-                    )
+                    err = f"Failed copying downloaded video '{downloaded_file['video_local_path']}' to final storage path '{downloaded_file['video_streamer_path']}'"
                     logger.error(err)
                     raise ex
 

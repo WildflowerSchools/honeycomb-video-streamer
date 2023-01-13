@@ -15,7 +15,7 @@ from ..log import logger
 from . import models
 
 
-class StreamServiceClient(object):
+class StreamServiceClient:
     def __init__(
         self,
         url=os.getenv("VIDEO_STREAM_SERVICE_URI", None),

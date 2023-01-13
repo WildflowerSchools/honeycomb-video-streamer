@@ -1,8 +1,10 @@
-from datetime import datetime, date
-from dateutil.parser import parse as date_time_parse
+from datetime import datetime
 import json
 import os
 import pytz
+
+
+from dateutil.parser import parse as date_time_parse
 
 
 def str_to_date(date_str):
