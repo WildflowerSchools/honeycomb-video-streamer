@@ -32,15 +32,15 @@ Then install packages:
 
 ### Prepare video:
 
-* Copy `./honeycomb_tools/.env.template` to `./honeycomb_tools/.env`
+* Copy `./video_prepare/.env.template` to `./video_prepare/.env`
 
-      cp ./honeycomb_tools/.env.template ./honeycomb_tools/.env
+      cp ./video_prepare/.env.template ./video_prepare/.env
 
 * Update ENV vars as needed
 * Run: `just install-dev`
 * Run (this example fetches video for greenbrier on 5/27/2021):
 
-      python -m honeycomb_tools prepare-videos-for-environment-for-time-range \
+      python -m video_prepare prepare-videos-for-environment-for-time-range \
       --environment_name greenbrier \
       --video_directory ./public/videos \
       --video_name 2021-05-27 \
