@@ -138,7 +138,9 @@ class Handle(object):
         if not await self.has_read_permission(classroom_id):
             raise PermissionException(f"User does not have read permission for classroom '{classroom_id}'")
 
-        classroom_records = self.db_session.execute(select(schema.classrooms_tbl).where(schema.classrooms_tbl.c.id == classroom_id))
+        classroom_records = self.db_session.execute(
+            select(schema.classrooms_tbl).where(schema.classrooms_tbl.c.id == classroom_id)
+        )
 
         if classroom_records is None or classroom_records.rowcount == 0:
             return None
@@ -196,7 +198,9 @@ class Handle(object):
 
     @ttl_cache(300)
     async def get_playset(self, playset_id) -> Optional[PlaysetResponse]:
-        playset_records = self.db_session.execute(select(schema.playsets_tbl).where(schema.playsets_tbl.c.id == playset_id))
+        playset_records = self.db_session.execute(
+            select(schema.playsets_tbl).where(schema.playsets_tbl.c.id == playset_id)
+        )
         if playset_records is None or playset_records.rowcount == 0:
             return None
 

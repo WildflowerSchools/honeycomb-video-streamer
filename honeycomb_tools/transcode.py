@@ -202,7 +202,7 @@ def generate_preview_image(input_path, output_path, rewrite=False):
         ss = 0
         try:
             frames = count_frames(input_path)
-            ss = round(frames/2/input_fps)
+            ss = round(frames / 2 / input_fps)
         except ValueError as e:
             logger.error(e)
 

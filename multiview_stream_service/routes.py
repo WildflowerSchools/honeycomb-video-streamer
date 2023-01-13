@@ -54,14 +54,14 @@ async def can_delete(perm_subject_domain: tuple = Depends(get_subject_domain)) -
     return resp[0]["allow"]
 
 
-@router.get("/videos/classrooms", dependencies=[Depends(verify_token), Depends(can_read)], response_model=ClassroomListResponse)
+@router.get(
+    "/videos/classrooms", dependencies=[Depends(verify_token), Depends(can_read)], response_model=ClassroomListResponse
+)
 async def load_classroom_list(
-        perm_subject_domain: tuple = Depends(get_subject_domain),
-        db_session=Depends(database.get_session)) -> Optional[ClassroomListResponse]:
+    perm_subject_domain: tuple = Depends(get_subject_domain), db_session=Depends(database.get_session)
+) -> Optional[ClassroomListResponse]:
     try:
-        db = Handle(db_session=db_session,
-                    perm_subject=perm_subject_domain[0],
-                    perm_domain=perm_subject_domain[1])
+        db = Handle(db_session=db_session, perm_subject=perm_subject_domain[0], perm_domain=perm_subject_domain[1])
         return await db.get_classrooms()
     except PermissionException as e:
         logging.error(e)
@@ -74,13 +74,12 @@ async def load_classroom_list(
     response_model=ClassroomResponse,
 )
 async def load_classroom(
-        classroom_id: str,
-        perm_subject_domain: tuple = Depends(get_subject_domain),
-        db_session=Depends(database.get_session)) -> Optional[ClassroomResponse]:
+    classroom_id: str,
+    perm_subject_domain: tuple = Depends(get_subject_domain),
+    db_session=Depends(database.get_session),
+) -> Optional[ClassroomResponse]:
     try:
-        db = Handle(db_session=db_session,
-                    perm_subject=perm_subject_domain[0],
-                    perm_domain=perm_subject_domain[1])
+        db = Handle(db_session=db_session, perm_subject=perm_subject_domain[0], perm_domain=perm_subject_domain[1])
         return await db.get_classroom(classroom_id)
     except PermissionException as e:
         logging.error(e)
@@ -93,13 +92,12 @@ async def load_classroom(
     response_model=PlaysetListResponse,
 )
 async def load_classroom_playsets(
-        classroom_id: str,
-        perm_subject_domain: tuple = Depends(get_subject_domain),
-        db_session=Depends(database.get_session)) -> Optional[PlaysetListResponse]:
+    classroom_id: str,
+    perm_subject_domain: tuple = Depends(get_subject_domain),
+    db_session=Depends(database.get_session),
+) -> Optional[PlaysetListResponse]:
     try:
-        db = Handle(db_session=db_session,
-                    perm_subject=perm_subject_domain[0],
-                    perm_domain=perm_subject_domain[1])
+        db = Handle(db_session=db_session, perm_subject=perm_subject_domain[0], perm_domain=perm_subject_domain[1])
         return await db.get_playsets(classroom_id)
     except PermissionException as e:
         logging.error(e)
@@ -112,14 +110,13 @@ async def load_classroom_playsets(
     response_model=PlaysetResponse,
 )
 async def load_playset_by_name(
-        classroom_id: str,
-        name: str,
-        perm_subject_domain: tuple = Depends(get_subject_domain),
-        db_session=Depends(database.get_session)) -> Optional[PlaysetResponse]:
+    classroom_id: str,
+    name: str,
+    perm_subject_domain: tuple = Depends(get_subject_domain),
+    db_session=Depends(database.get_session),
+) -> Optional[PlaysetResponse]:
     try:
-        db = Handle(db_session=db_session,
-                    perm_subject=perm_subject_domain[0],
-                    perm_domain=perm_subject_domain[1])
+        db = Handle(db_session=db_session, perm_subject=perm_subject_domain[0], perm_domain=perm_subject_domain[1])
         result = await db.get_playset_by_name(classroom_id, name)
         if result is None:
             raise HTTPException(status_code=404, detail="not_found")
@@ -136,14 +133,13 @@ async def load_playset_by_name(
     response_model=PlaysetListResponse,
 )
 async def load_playsets_by_date(
-        classroom_id: str,
-        date: str,
-        perm_subject_domain: tuple = Depends(get_subject_domain),
-        db_session=Depends(database.get_session)) -> Optional[PlaysetListResponse]:
+    classroom_id: str,
+    date: str,
+    perm_subject_domain: tuple = Depends(get_subject_domain),
+    db_session=Depends(database.get_session),
+) -> Optional[PlaysetListResponse]:
     try:
-        db = Handle(db_session=db_session,
-                    perm_subject=perm_subject_domain[0],
-                    perm_domain=perm_subject_domain[1])
+        db = Handle(db_session=db_session, perm_subject=perm_subject_domain[0], perm_domain=perm_subject_domain[1])
         result = await db.get_playsets_by_date(classroom_id, date)
         if result is None:
             raise HTTPException(status_code=404, detail="not_found")
@@ -155,16 +151,15 @@ async def load_playsets_by_date(
 
 
 @router.post(
-    "/videos/playsets", dependencies=[Depends(verify_token), Depends(can_write)], response_model=Optional[PlaysetResponse]
+    "/videos/playsets",
+    dependencies=[Depends(verify_token), Depends(can_write)],
+    response_model=Optional[PlaysetResponse],
 )
 async def create_playset(
-        playset: Playset,
-        perm_subject_domain: tuple = Depends(get_subject_domain),
-        db_session=Depends(database.get_session)):
+    playset: Playset, perm_subject_domain: tuple = Depends(get_subject_domain), db_session=Depends(database.get_session)
+):
     try:
-        db = Handle(db_session=db_session,
-                    perm_subject=perm_subject_domain[0],
-                    perm_domain=perm_subject_domain[1])
+        db = Handle(db_session=db_session, perm_subject=perm_subject_domain[0], perm_domain=perm_subject_domain[1])
 
         classroom = await db.get_classroom(playset.classroom_id)
         if classroom is None:
@@ -187,13 +182,10 @@ async def create_playset(
     "/videos/playsets/{playset_id}", dependencies=[Depends(verify_token), Depends(can_delete)], response_model=None
 )
 async def delete_playset(
-        playset_id: str,
-        perm_subject_domain: tuple = Depends(get_subject_domain),
-        db_session=Depends(database.get_session)):
+    playset_id: str, perm_subject_domain: tuple = Depends(get_subject_domain), db_session=Depends(database.get_session)
+):
     try:
-        db = Handle(db_session=db_session,
-                    perm_subject=perm_subject_domain[0],
-                    perm_domain=perm_subject_domain[1])
+        db = Handle(db_session=db_session, perm_subject=perm_subject_domain[0], perm_domain=perm_subject_domain[1])
         if await db.delete_playset(playset_id):
             return
         else:
@@ -209,14 +201,13 @@ async def delete_playset(
     response_model=VideoResponse,
 )
 async def create_video(
-        playset_id: str,
-        video: Video,
-        perm_subject_domain: tuple = Depends(get_subject_domain),
-        db_session=Depends(database.get_session)) -> VideoResponse:
+    playset_id: str,
+    video: Video,
+    perm_subject_domain: tuple = Depends(get_subject_domain),
+    db_session=Depends(database.get_session),
+) -> VideoResponse:
     try:
-        db = Handle(db_session=db_session,
-                    perm_subject=perm_subject_domain[0],
-                    perm_domain=perm_subject_domain[1])
+        db = Handle(db_session=db_session, perm_subject=perm_subject_domain[0], perm_domain=perm_subject_domain[1])
         video.playset_id = playset_id
         return await db.create_video(video)
     except PermissionException as e:
