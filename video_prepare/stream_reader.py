@@ -29,8 +29,8 @@ class NonBlockingStreamReader:
     def readline(self, timeout=None):
         try:
             return self._q.get(block=timeout is not None, timeout=timeout)
-        except Empty:
-            raise StreamTimeout
+        except Empty as e:
+            raise StreamTimeout from e
 
 
 class StreamTimeout(Exception):

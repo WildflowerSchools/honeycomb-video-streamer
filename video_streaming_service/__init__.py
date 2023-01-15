@@ -2,8 +2,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from .database import Database
 from .routes import router
 
+database = Database()
 app = FastAPI()
 
 origins = [

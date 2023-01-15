@@ -9,10 +9,10 @@ if [ ! -z "${APPEND}"  ] && [ "${APPEND}" = "true" ]; then
     rewrite_append="${rewrite_append} --append"
 fi
 
-python -m honeycomb_tools prepare-videos-for-environment-for-time-range \
+python -m video_prepare prepare-videos-for-environment-for-time-range \
     --environment_name ${ENVIRONMENT_NAME} \
-    --output_path /data/videos \
-    --output_name ${OUTPUT_NAME:="trash"} \
+    --video_directory /data/videos \
+    --video_name ${VIDEO_NAME:="trash"} \
     --start $START_TIME \
     --end $END_TIME \
     ${rewrite_append}

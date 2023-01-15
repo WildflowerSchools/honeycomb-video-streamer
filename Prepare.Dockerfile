@@ -91,15 +91,18 @@ RUN wget http://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.gz && \
       --prefix="${FFMPEG_PREFIX}" && \
       make ${MAKEFLAGS} && make install && make distclean
 
+
 FROM python:3.10.9-slim
 
 RUN apt update -y && \
     apt-get install -y \
+    build-essential \
     libasound2 \
     libgl1 \
     libglib2.0-0 \
     libass9 \
     libmp3lame0 \
+    libpq-dev \
     librtmp1 \
     libsdl2-2.0-0 \
     libsndio7.0 \
@@ -135,10 +138,8 @@ COPY setup.py pyproject.toml /app/
 RUN poetry lock && \
     poetry export -f requirements.txt --without dev | pip install -r /dev/stdin
 
-RUN mkdir -p /app/honeycomb_tools
-COPY honeycomb_tools/README.md /app/honeycomb_tools
-COPY honeycomb_tools/*.py /app/honeycomb_tools/
-COPY honeycomb_tools/assets/ /app/honeycomb_tools/assets
+RUN mkdir -p /app/video_prepare
+COPY video_prepare/ /app/video_prepare/
 COPY scripts/ /app
 
 CMD sh /app/prepare-volume.sh

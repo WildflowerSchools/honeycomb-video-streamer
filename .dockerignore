@@ -6,6 +6,7 @@ build/*
 data/*
 prep/*
 ignore/*
+scratchpad/*
 honeycomb_video_streamer.egg-info/*
 .git/*
 .idea/*

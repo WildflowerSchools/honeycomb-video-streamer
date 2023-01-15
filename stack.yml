@@ -8,8 +8,11 @@ services:
     environment:
       POSTGRES_DB: honeycomb-video-streamer
       POSTGRES_PASSWORD: iamaninsecurepassword
+      PG_TRUST_LOCALNET: true
     ports:
       - 5433:5432
+    volumes:
+      - postgres_db:/var/lib/postgresql/data
 
   adminer:
     image: adminer
@@ -28,4 +31,11 @@ services:
     volumes:
       - "./public/videos:/app/public/videos"
     env_file:
-      - "./.docker.env"
+      - ".env"
+
+volumes:
+  postgres_db:
+
+networks:
+  default:
+    name: honeycomb-video-streamer_default

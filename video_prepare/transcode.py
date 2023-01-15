@@ -1,9 +1,9 @@
-import logging
 import os.path
 import shutil
 
 import ffmpeg
 
+from .log import logger
 from .stream_reader import NonBlockingStreamReader, StreamTimeout
 
 
@@ -38,10 +38,10 @@ def is_valid_video(video_path):
             if not output:
                 # Stream exhausted, file read successfully!
                 return True
-            logging.info(output)
+            logger.info(output)
 
             if repeat >= repeat_threshold:
-                logging.warning("File read stuck in repeat loop, terminating read")
+                logger.warning("File read stuck in repeat loop, terminating read")
                 return False
 
             if output == last_output:
@@ -51,10 +51,10 @@ def is_valid_video(video_path):
 
             last_output = output
     except StreamTimeout:
-        logging.warning("Stream timeout, ffmpeg hanging reading video file")
+        logger.warning("Stream timeout, ffmpeg hanging reading video file")
         return False
     except ffmpeg._run.Error:
-        logging.error("video file '{}' corrupt".format(video_path))
+        logger.error(f"video file '{video_path}' corrupt")
         return False
 
     return True
@@ -64,7 +64,7 @@ def probe_file(mp4_video_path):
     try:
         return ffmpeg.probe(mp4_video_path)
     except Exception as err:
-        logging.error(err)
+        logger.error(err)
         raise err
 
 
@@ -73,8 +73,8 @@ def count_frames(mp4_video_path):
     # default=nokey=1:noprint_wrappers=1
     probe = probe_file(mp4_video_path)
     if probe is None or "streams" not in probe:
-        err = "ffmpeg returned unexpected response reading {}".format(mp4_video_path)
-        logging.error(err)
+        err = f"ffmpeg returned unexpected response reading {mp4_video_path}"
+        logger.error(err)
         raise ValueError(err)
 
     video_stream = next((stream for stream in probe["streams"] if stream["codec_type"] == "video"), None)
@@ -87,10 +87,10 @@ def get_duration(hls_video_path):
 
 
 def trim_video(input_path, output_path, duration=10):
-    logging.info("Trimming video '{}' down to {} seconds".format(input_path, duration))
+    logger.info(f"Trimming video '{input_path}' down to {duration} seconds")
 
     use_tmp = input_path == output_path
-    tmp_path = "{}.tmp".format(input_path)
+    tmp_path = f"{input_path}.tmp"
     ffmpeg_input_path = input_path
     try:
         if use_tmp:
@@ -101,8 +101,8 @@ def trim_video(input_path, output_path, duration=10):
             output_path, r=10, vframes=100
         ).overwrite_output().run()
     except ffmpeg._run.Error as e:
-        logging.error("Failed trimming video {}".format(input_path))
-        logging.error(e)
+        logger.error(f"Failed trimming video {input_path}")
+        logger.error(e)
         return False
     finally:
         if use_tmp:
@@ -130,7 +130,7 @@ def concat_videos(input_path, output_path, thumb_path=None, rewrite=False):
                 files = ffmpeg.input(f"file:{input_path}", format="concat", safe=0, r=10)
                 files.output(f"file:{output_path}", c="copy", r=10, vsync=0).run()
             else:
-                logging.info("concatenated video '{}' already exists".format(output_path))
+                logger.info(f"concatenated video '{output_path}' already exists")
 
             if thumb_path is not None:
                 thumb_exists = os.path.exists(thumb_path)
@@ -144,14 +144,14 @@ def concat_videos(input_path, output_path, thumb_path=None, rewrite=False):
                         thumb_path, preset="veryfast", sws_flags="fast_bilinear", acodec="copy", crf=30
                     ).run()
                 else:
-                    logging.info("small video '{}' already exists".format(thumb_path))
+                    logger.info(f"small video '{thumb_path}' already exists")
 
             success = True
         except ffmpeg._run.Error as e:
-            logging.warning(
-                "concatenate videos failed with ffmpeg Error, tried {}/{} (using rewrite=True)".format(ii + 1, retries)
+            logger.warning(
+                f"concatenate videos failed with ffmpeg Error, tried {ii + 1}/{retries} (using rewrite=True)"
             )
-            logging.warning(e)
+            logger.warning(e)
             rewrite = True
 
     if not success:
@@ -169,7 +169,7 @@ def prepare_hls(input_path, output_path, hls_time=10, rewrite=False, append=True
 
     hls_options = dict(
         format="hls",
-        hls_time=10,
+        hls_time=hls_time,
         hls_list_size=0,
         # hls_segment_type="fmp4", # This should work better on Safari, but instead causes Safari to crash in < 20 seconds
         # movflags="+frag_keyframe",
@@ -177,17 +177,18 @@ def prepare_hls(input_path, output_path, hls_time=10, rewrite=False, append=True
     )
     if not hls_exists:
         # ffmpeg -i ./public/videos/test/cc-1/output-small.mp4 -profile:v
-        # baseline -level 3.0 -s 640x360 -start_number 0 -hls_time 10
+        # baseline -level 3.0 -s 640x360 -start_number 0 -hls_time hls_time
         # -hls_list_size 0 -f hls public/videos/output.m3u8
         ffmpeg.input(input_path).output(output_path, **hls_options).run()
     else:
         if append:
             ffmpeg.input(input_path).output(output_path, hls_flags="append_list", **hls_options).run()
         else:
-            logging.info("hls video '{}' already exists, and append mode set to 'False'".format(output_path))
+            logger.info(f"hls video '{output_path}' already exists, and append mode set to 'False'")
 
 
 def generate_preview_image(input_path, output_path, rewrite=False):
+    input_fps = 10
     preview_exists = os.path.exists(output_path)
 
     if preview_exists:
@@ -198,14 +199,24 @@ def generate_preview_image(input_path, output_path, rewrite=False):
     # ffmpeg -y -i ./public/videos/test/cc-1/output.m3u8 -f image2 -vframes 1
     # preview.jpg
     if not preview_exists:
-        ffmpeg.input(input_path).output(output_path, format="image2", vframes=1).run()
+        ss = 0
+        try:
+            frames = count_frames(input_path)
+            ss = round(frames / 2 / input_fps)
+        except ValueError as e:
+            logger.error(e)
+
+        if ss > 0:
+            ffmpeg.input(input_path, ss=ss).output(output_path, format="image2", vframes=1).run()
+        else:
+            logger.warning(f"Could not generate preview image for '{input_path}', file appears empty or corrupted")
     else:
-        logging.info("preview image '{}' already exists".format(output_path))
+        logger.info(f"preview image '{output_path}' already exists")
 
 
 def technical_difficulties_blank_image_path():
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    return "{}/assets/blank.jpg".format(dir_path)
+    return f"{dir_path}/assets/blank.jpg"
 
 
 def create_technical_difficulties_clip(clip_path):
@@ -240,13 +251,13 @@ def pad_video(input_path, output_path, frames):
     :return: boolean
     """
 
-    logging.info("Padding video '{}' with {} frames".format(input_path, frames))
+    logger.info(f"Padding video '{input_path}' with {frames} frames")
 
     use_tmp = input_path == output_path
-    tmp_path = "{}.tmp".format(input_path)
+    tmp_path = f"{input_path}.tmp"
     ffmpeg_input_path = input_path
     if frames <= 0:
-        logging.warning("Frame padding giving to pad_video smaller than 1: {}".format(frames))
+        logger.warning(f"Frame padding giving to pad_video smaller than 1: {frames}")
         return False
 
     try:
@@ -256,11 +267,11 @@ def pad_video(input_path, output_path, frames):
 
         stop_duration = frames / 10
         ffmpeg.input(ffmpeg_input_path).output(
-            output_path, filter_complex="tpad=stop_duration={}:stop_mode=clone".format(stop_duration)
+            output_path, filter_complex=f"tpad=stop_duration={stop_duration}:stop_mode=clone"
         ).overwrite_output().run()
     except ffmpeg._run.Error as e:
-        logging.error("Failed padding {} with {} additional frames".format(input_path, frames))
-        logging.error(e)
+        logger.error(f"Failed padding {input_path} with {frames} additional frames")
+        logger.error(e)
         return False
     finally:
         if use_tmp:
