@@ -68,7 +68,7 @@ steps:
     - echo -n prepare-v$DRONE_BUILD_NUMBER,prepare-latest > .tags
     - cat .tags
 
-- name: docker-prepare-service
+- name: docker-prepare-service-amd64
   image: thegeeklab/drone-docker-buildx
   privileged: true
   settings:
@@ -78,10 +78,25 @@ steps:
       from_secret: docker_password
     repo: wildflowerschools/honeycomb-video-streamer
     dockerfile: Prepare.Dockerfile
-    platforms: linux/amd64,linux/arm64
+    platforms: linux/amd64
     cache_from:
-      - type=registry\\,ref=wildflowerschools/honeycomb-video-streamer:prepare-cache
-    cache_to: type=registry,ref=wildflowerschools/honeycomb-video-streamer:prepare-cache,mode=max
+      - type=registry\\,ref=wildflowerschools/honeycomb-video-streamer:prepare-cache-amd64
+    cache_to: type=registry,ref=wildflowerschools/honeycomb-video-streamer:prepare-cache-amd64,mode=max
+
+- name: docker-prepare-service-arm64
+  image: thegeeklab/drone-docker-buildx
+  privileged: true
+  settings:
+    username:
+      from_secret: docker_username
+    password:
+      from_secret: docker_password
+    repo: wildflowerschools/honeycomb-video-streamer
+    dockerfile: Prepare.Dockerfile
+    platforms: linux/arm64
+    cache_from:
+      - type=registry\\,ref=wildflowerschools/honeycomb-video-streamer:prepare-cache-arm64
+    cache_to: type=registry,ref=wildflowerschools/honeycomb-video-streamer:prepare-cache-arm64,mode=max
 
 services:
   - name: docker-service
