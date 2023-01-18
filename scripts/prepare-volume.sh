@@ -12,7 +12,8 @@ fi
 python -m video_prepare prepare-videos-for-environment-for-time-range \
     --environment_name ${ENVIRONMENT_NAME} \
     --video_directory /data/videos \
-    --video_name ${VIDEO_NAME:="trash"} \
+    --raw_video_storage_directory /data \
+    --video_name ${VIDEO_NAME} \
     --start $START_TIME \
     --end $END_TIME \
     ${rewrite_append}

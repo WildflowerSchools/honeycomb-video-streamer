@@ -1,6 +1,9 @@
 from sqlalchemy import MetaData, Column, Table, String, ForeignKey, DateTime
 from sqlalchemy.dialects.postgresql import UUID
 
+from sqlalchemy_utc import UtcDateTime
+
+
 metadata = MetaData()
 
 classrooms_tbl = Table(
@@ -16,8 +19,8 @@ playsets_tbl = Table(
     Column("id", UUID(as_uuid=True), primary_key=True, nullable=False),
     Column("classroom_id", UUID(as_uuid=True), ForeignKey("classroom.id"), nullable=False),
     Column("name", String(), nullable=True),
-    Column("start_time", DateTime(), nullable=True),
-    Column("end_time", DateTime(), nullable=True),
+    Column("start_time", UtcDateTime(), nullable=True),
+    Column("end_time", UtcDateTime(), nullable=True),
 )
 
 videos_tbl = Table(
