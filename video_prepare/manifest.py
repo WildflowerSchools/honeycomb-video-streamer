@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 import copy
 from datetime import timedelta
 import os
@@ -125,32 +126,49 @@ class Manifest:
         return last_available_video_end_time
 
     def download_or_copy_files(self, workers=cpu_count() - 1):
-        downloadable_video_list = []
-        for video in self.captured_video_list:
-            # First try to copy the file from local disk if that's an option
-            if not os.path.exists(video["video_streamer_path"]):
-                copy_success = False
+        missing_video = []
+        video_needing_download = []
 
-                if self.raw_video_storage_directory:
-                    raw_video_path = os.path.join(self.raw_video_storage_directory, video["path"])
-                    if os.path.exists(raw_video_path):
-                        try:
-                            shutil.copy(raw_video_path, video["video_streamer_path"])
-                            copy_success = True
-                        except Exception as ex:
-                            warning = f"Failed copying raw video '{raw_video_path}' to final storage path '{video['video_streamer_path']}', will attempt to download file using video_io service"
-                            logger.warning(warning)
+        # 1. First filter out any videos already available on disk
+        for v in self.captured_video_list:
+            if not os.path.exists(v["video_streamer_path"]):
+                missing_video.append(v)
 
-                if not copy_success:
-                    downloadable_video_list.append(video)
+        def copy_from_raw_video_storage(video):
+            copy_success = False
+            if self.raw_video_storage_directory:
+                raw_video_path = os.path.join(self.raw_video_storage_directory, video["path"])
+                print(raw_video_path)
+                if os.path.exists(raw_video_path):
+                    try:
+                        shutil.copy(raw_video_path, video["video_streamer_path"])
+                        logger.info(
+                            f"Copied '{raw_video_path}' to final storage path '{video['video_streamer_path']}' successfully"
+                        )
+                        copy_success = True
+                    except Exception as ex:
+                        warning = f"Failed copying raw video '{raw_video_path}' to final storage path '{video['video_streamer_path']}', will attempt to download file using video_io service"
+                        logger.warning(warning)
 
-        # Otherwise, we download the file. Files are first downloaded to a tmp directory before they are moved to permanent storage (files are renamed when they are moved)
+            return video, copy_success
+
+        # 2. Try to copy videos from the raw_video_directory (if that's available)
+        with ThreadPoolExecutor(max_workers=20) as executor:
+            results = executor.map(copy_from_raw_video_storage, missing_video)
+            executor.shutdown(wait=True)
+
+        for (v, success) in results:
+            if not success:
+                video_needing_download.append(v)
+
+        # 3. After attempting to copy the video file, fall back to downloading the file
+        #    Files are first downloaded to a tmp directory before they are moved to permanent storage (files are renamed when they are moved)
         with tempfile.TemporaryDirectory() as tmp_dir:
             videos = video_io.download_video_files(
-                video_metadata=downloadable_video_list, local_video_directory=tmp_dir, max_workers=workers
+                video_metadata=video_needing_download, local_video_directory=tmp_dir, max_workers=workers
             )
 
-            for downloaded_file in downloadable_video_list:
+            for downloaded_file in video_needing_download:
                 try:
                     shutil.move(downloaded_file["video_local_path"], downloaded_file["video_streamer_path"])
                 except Exception as ex:

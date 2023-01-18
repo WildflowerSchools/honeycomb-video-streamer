@@ -1,4 +1,4 @@
-from sqlalchemy import MetaData, Column, Table, String, ForeignKey, DateTime
+from sqlalchemy import MetaData, Column, Table, String, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 
 from sqlalchemy_utc import UtcDateTime
