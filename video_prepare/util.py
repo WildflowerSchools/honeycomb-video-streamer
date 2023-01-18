@@ -56,3 +56,7 @@ def vts(frames):
     minutes = total_minutes - (hours * 60)
     seconds = total_seconds - (total_minutes * 60)
     return f"{hours:02}:{minutes:02}:{seconds:02}.{fractional}00"
+
+
+def clean_pd_ts(ts):
+    return ts.to_pydatetime().astimezone(pytz.utc).strftime("%Y-%m-%dT%H:%M:%SZ")

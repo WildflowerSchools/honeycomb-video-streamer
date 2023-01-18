@@ -98,7 +98,11 @@ def list_videos_for_environment_for_time_range(environment_name, output_path, ou
     help="name of the environment in honeycomb, required for using the honeycomb consumer",
     required=True,
 )
-@click.option("--video_directory", "-o", help="root directory to store prepared videos in", required=True)
+@click.option("--video_directory", "-v", help="Directory to store prepared videos in", required=True)
+@click.option(
+    "--raw_video_storage_directory",
+    help="Root directory where raw videos are stored. In production, this is the shared EFS volume's mount point. Providing this path will allow the video_streamer to copy files rather than fetch video files over http.",
+)
 @click.option(
     "--video_name",
     "-n",
@@ -140,7 +144,7 @@ def list_videos_for_environment_for_time_range(environment_name, output_path, ou
     default=[],
 )
 def prepare_videos_for_environment_for_time_range(
-    environment_name, video_directory, video_name, start, end, rewrite, append, camera
+    environment_name, video_directory, raw_video_storage_directory, video_name, start, end, rewrite, append, camera
 ):
     core.prepare_videos_for_environment_for_time_range(
         environment_name=environment_name,
@@ -151,6 +155,7 @@ def prepare_videos_for_environment_for_time_range(
         rewrite=rewrite,
         append=append,
         camera=camera,
+        raw_video_storage_directory=raw_video_storage_directory,
     )
 
 

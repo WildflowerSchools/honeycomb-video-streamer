@@ -182,7 +182,7 @@ class Handle:
         if playset_records is None or playset_records.rowcount == 0:
             return None
 
-        playsets_response = PlaysetListResponse
+        playsets_response = PlaysetListResponse()
         for playset_record in playset_records:
             response = PlaysetResponse(**dict(playset_record))
             response.videos = []
@@ -257,7 +257,7 @@ class Handle:
         if playset_records is None or playset_records.rowcount == 0:
             return None
 
-        playsets_response = PlaysetListResponse
+        playsets_response = PlaysetListResponse()
         for playset_record in playset_records:
             response = PlaysetResponse(playset_record)
             response.videos = []

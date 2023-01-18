@@ -1,9 +1,12 @@
 import copy
+from datetime import timedelta
 import os
 from multiprocessing import cpu_count
 import shutil
 import tempfile
 
+import pandas as pd
+import pytz
 import video_io
 
 from . import util
@@ -11,12 +14,74 @@ from .log import logger
 
 
 class Manifest:
-    def __init__(self, output_directory="", empty_clip_path=""):
+    def __init__(
+        self,
+        video_metadata=None,
+        start=None,
+        end=None,
+        output_directory="",
+        empty_clip_path="",
+        raw_video_storage_directory=None,
+    ):
+        if video_metadata is None:
+            video_metadata = []
+
         self.captured_video_list = []
         self.missing_video_list = []
         self.downloaded_video_list = []
+
+        self.video_metadata = video_metadata
+
+        if isinstance(end, str):
+            self.end_datetime = util.str_to_date(end)
+        else:
+            self.end_datetime = end
+
+        if isinstance(start, str):
+            self.start_datetime = util.str_to_date(start)
+        else:
+            self.start_datetime = start
+
         self.output_directory = output_directory
+        util.create_dir(self.output_directory)
+
         self.empty_clip_path = empty_clip_path
+        self.raw_video_storage_directory = raw_video_storage_directory
+
+        self.process_video_metadata()
+
+    def process_video_metadata(self):
+        """
+        Parse the video_metadata list. Track any missing videos not known to the video API service and track all video
+        files that should be downloaded (or copied from the local EFS volume if available)
+        """
+
+        datetimeindex = pd.date_range(
+            self.start_datetime, self.end_datetime - timedelta(seconds=10), freq="10S", tz=pytz.UTC
+        )
+
+        # Convert datapoints to a dataframe to use pd timeseries functionality
+        df_datapoints = pd.DataFrame(self.video_metadata)
+        if len(self.video_metadata) > 0:
+            # Move timestamp column to datetime index
+            df_datapoints["video_timestamp"] = pd.to_datetime(df_datapoints["video_timestamp"], utc=True)
+            df_datapoints = df_datapoints.set_index(pd.DatetimeIndex(df_datapoints["video_timestamp"]))
+            df_datapoints = df_datapoints.drop(columns=["video_timestamp"])
+            # Scrub duplicates (these shouldn't exist)
+            df_datapoints = df_datapoints[~df_datapoints.index.duplicated(keep="first")]
+
+        # Fill in missing time indices
+        df_datapoints = df_datapoints.reindex(datetimeindex)
+        # TODO: Consider handling empty df_datapoints and lining it up with timestamps that cover a given start and end time
+        for idx_datetime, row in df_datapoints.iterrows():
+            start_formatted_time = util.clean_pd_ts(idx_datetime)
+            end_formatted_time = util.clean_pd_ts(idx_datetime + timedelta(seconds=10))
+            # output = os.path.join(target, f"{start_formatted_time}.video.mp4")
+
+            if "data_id" not in row or pd.isnull(row["data_id"]) or "path" not in row or pd.isnull(row["path"]):
+                self.add_to_missing(start=start_formatted_time, end=end_formatted_time)
+            else:
+                self.add_to_download(video_metadatum=row.to_dict(), start=start_formatted_time, end=end_formatted_time)
 
     def get_files(self):
         # last_available_video_end_time = self.get_last_valid_clip_end_time()
@@ -59,13 +124,27 @@ class Manifest:
 
         return last_available_video_end_time
 
-    def download_files(self, workers=cpu_count() - 1):
+    def download_or_copy_files(self, workers=cpu_count() - 1):
         downloadable_video_list = []
         for video in self.captured_video_list:
+            # First try to copy the file from local disk if that's an option
             if not os.path.exists(video["video_streamer_path"]):
-                util.create_dir(self.output_directory)
-                downloadable_video_list.append(video)
+                copy_success = False
 
+                if self.raw_video_storage_directory:
+                    raw_video_path = os.path.join(self.raw_video_storage_directory, video["path"])
+                    if os.path.exists(raw_video_path):
+                        try:
+                            shutil.copy(raw_video_path, video["video_streamer_path"])
+                            copy_success = True
+                        except Exception as ex:
+                            warning = f"Failed copying raw video '{raw_video_path}' to final storage path '{video['video_streamer_path']}', will attempt to download file using video_io service"
+                            logger.warning(warning)
+
+                if not copy_success:
+                    downloadable_video_list.append(video)
+
+        # Otherwise, we download the file. Files are first downloaded to a tmp directory before they are moved to permanent storage (files are renamed when they are moved)
         with tempfile.TemporaryDirectory() as tmp_dir:
             videos = video_io.download_video_files(
                 video_metadata=downloadable_video_list, local_video_directory=tmp_dir, max_workers=workers
@@ -79,7 +158,8 @@ class Manifest:
                     logger.error(err)
                     raise ex
 
-            return videos
+        # Return a list of all files that were downloaded
+        return videos
 
     def execute(self):
-        return self.download_files()
+        return self.download_or_copy_files()

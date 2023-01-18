@@ -4,7 +4,7 @@ from typing import List, Optional
 
 from . import const, util
 from .honeycomb_service import HoneycombClient
-from .introspection import fetch_video_metadata_in_range, process_video_metadata_for_download
+from .introspection import fetch_video_metadata_in_range
 from .log import logger
 from .stream_service import client as stream_service_client, models
 from .transcode import (
@@ -28,6 +28,7 @@ def prepare_videos_for_environment_for_time_range(
     rewrite: bool = False,
     append: bool = False,
     camera: Optional[List[str]] = None,
+    raw_video_storage_directory: Optional[str] = None,
 ):
     if camera is None:
         camera = []
@@ -66,23 +67,10 @@ def prepare_videos_for_environment_for_time_range(
         playset=models.Playset(classroom_id=environment_id, name=video_name, start_time=start, end_time=end)
     )
 
-    # manifest_path = os.path.join(output_dir, "index.json")
-
     empty_clip_path = const.empty_clip_path(output_dir)
     copy_technical_difficulties_clip(clip_path=empty_clip_path, output_path=empty_clip_path, rewrite=rewrite)
 
     index_manifest = {}
-    # if not os.path.isfile(manifest_path):
-    #     if rewrite is False:
-    #         logger.warning(f"Manifest '{manifest_path}' missing. Setting rewrite flag to True.")
-    #     rewrite = True
-    # else:
-    #     with open(manifest_path, "r") as fp:
-    #         try:
-    #             index_manifest = json.load(fp)
-    #         except ValueError as e:
-    #             logger.error("Failed loading {} - {}".format(index_manifest, e))
-    #             rewrite = True
 
     # track video json to write to environment's index.json
     all_video_meta: List[models.VideoResponse] = index_manifest.get("videos", [])
@@ -110,13 +98,15 @@ def prepare_videos_for_environment_for_time_range(
 
         # fetch all of the videos for each camera, records are returned ordered by timestamp
         # missing clips are stored behind the "missing" attribute
-        # target=f"{output_path}/{environment_id}/{output_name}/{assigned_name}/",
-        manifest = process_video_metadata_for_download(
+        manifest = Manifest(
             video_metadata=video_metadata,
             start=start,
             end=end,
-            manifest=Manifest(output_directory=camera_specific_directory, empty_clip_path=empty_clip_path),
+            output_directory=camera_specific_directory,
+            empty_clip_path=empty_clip_path,
+            raw_video_storage_directory=raw_video_storage_directory,
         )
+
         if len(manifest.get_files()) == 0:
             continue
 
@@ -282,12 +272,3 @@ def prepare_videos_for_environment_for_time_range(
         #     name=output_name,
         #     time_range=[start.strftime("%H:%M:%S%z"), end.strftime("%H:%M:%S%z")],
         # )
-
-        # with open(manifest_path, "w") as fp:
-        #     json.dump(
-        #         {"start": start, "end": end, "videos": all_video_meta, "building": (idx_ii < len(assignments) - 1)},
-        #         fp,
-        #         cls=util.DateTimeEncoder,
-        #     )
-        #     fp.flush()
-        # done
