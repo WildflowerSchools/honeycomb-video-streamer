@@ -14,6 +14,6 @@ python -m video_prepare prepare-videos-for-environment-for-time-range \
     --video_directory /data/videos \
     --raw_video_storage_directory /data \
     --video_name ${VIDEO_NAME} \
-    --start $START_TIME \
-    --end $END_TIME \
+    --start ${START_TIME} \
+    --end ${END_TIME} \
     ${rewrite_append}
