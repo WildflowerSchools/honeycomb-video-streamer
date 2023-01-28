@@ -1,8 +1,10 @@
 import os.path
 import shutil
+import subprocess
 
 import ffmpeg
 
+from .util import convert_kwargs_to_cmd_line_args
 from .log import logger
 from .stream_reader import NonBlockingStreamReader, StreamTimeout
 
@@ -111,7 +113,7 @@ def trim_video(input_path, output_path, duration=10):
     return True
 
 
-def concat_videos(input_path, output_path, thumb_path=None, rewrite=False):
+def concat_videos(input_path, output_path, rewrite=False):
     success = False
 
     retries = 3
@@ -132,20 +134,6 @@ def concat_videos(input_path, output_path, thumb_path=None, rewrite=False):
             else:
                 logger.info(f"concatenated video '{output_path}' already exists")
 
-            if thumb_path is not None:
-                thumb_exists = os.path.exists(thumb_path)
-                if thumb_exists:
-                    if rewrite or not is_valid_video(thumb_path):
-                        os.remove(thumb_path)
-                        thumb_exists = False
-
-                if not thumb_exists:
-                    ffmpeg.input(output_path, an=None).filter("scale", 320, -1).output(
-                        thumb_path, preset="veryfast", sws_flags="fast_bilinear", crf=30
-                    ).run()
-                else:
-                    logger.info(f"small video '{thumb_path}' already exists")
-
             success = True
         except ffmpeg._run.Error as e:
             logger.warning(
@@ -160,29 +148,50 @@ def concat_videos(input_path, output_path, thumb_path=None, rewrite=False):
 
 def prepare_hls(input_path, output_path, hls_time=10, rewrite=False, append=True):
     hls_exists = os.path.exists(output_path)
+    hls_directory = os.path.dirname(output_path)
 
     if hls_exists:
         # Commenting out valid video check, great idea but is VERY SLOW:
         if rewrite:  # or not is_valid_video(output_path):
             os.remove(output_path)
+
+            for item in os.listdir(hls_directory):
+                if item.endswith(".m3u8") or item.endswith(".ts"):
+                    os.remove(os.path.join(hls_directory, item))
             hls_exists = False
 
-    hls_options = dict(
-        format="hls",
-        hls_time=hls_time,
-        hls_list_size=0,
-        # hls_segment_type="fmp4", # This should work better on Safari, but instead causes Safari to crash in < 20 seconds
-        # movflags="+frag_keyframe",
-        c="copy",
-    )
     if not hls_exists:
-        # ffmpeg -i ./public/videos/test/cc-1/output-small.mp4 -profile:v
-        # baseline -level 3.0 -s 640x360 -start_number 0 -hls_time hls_time
-        # -hls_list_size 0 -f hls public/videos/output.m3u8
-        ffmpeg.input(input_path).output(output_path, **hls_options).run()
+        segment_format = "%03d.ts"
+        segment_filenames = os.path.join(hls_directory, f"%v_{segment_format}")
+        m3u8_steams_output = os.path.join(hls_directory, "output_stream_%v.m3u8")
+
+        hls_options = dict(
+            preset="veryfast",
+            crf=25,
+            filter_complex="[0:v]split=2[v1][v2out];[v1]scale=iw*.5:ih*.5[v1out]",
+            map=["[v1out]", "[v2out]"],
+            f="hls",
+            hls_time=hls_time,
+            hls_list_size=0,
+            hls_playlist_type="event",  # Allow appending to video
+            hls_segment_filename=segment_filenames,
+            var_stream_map="v:0 v:1",
+            master_pl_name="output.m3u8",
+        )
+        hls_options["c:v:0"] = "libx264"
+        hls_options["b:v:0"] = "2400k"
+        hls_options["c:v:1"] = "libx264"
+        hls_options["b:v:1"] = "600k"
+
+        hls_args = convert_kwargs_to_cmd_line_args(hls_options)
+        hls_args = ["ffmpeg", "-i", input_path] + hls_args
+        hls_args.append(m3u8_steams_output)
+
+        subprocess.run(hls_args)
     else:
         if append:
-            ffmpeg.input(input_path).output(output_path, hls_flags="append_list", **hls_options).run()
+            pass
+            # ffmpeg.input(input_path).output(streams_output, hls_flags="append_list", **hls_options).run()
         else:
             logger.info(f"hls video '{output_path}' already exists, and append mode set to 'False'")
 

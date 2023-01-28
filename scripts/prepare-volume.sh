@@ -1,12 +1,16 @@
 #!/bin/sh
 
-rewrite_append=""
+cmd_extras=""
 if [ ! -z "${REWRITE}"  ] && [ "${REWRITE}" = "true" ]; then
-    rewrite_append="--rewrite"
+    cmd_extras="--rewrite"
 fi
 
 if [ ! -z "${APPEND}"  ] && [ "${APPEND}" = "true" ]; then
-    rewrite_append="${rewrite_append} --append"
+    cmd_extras="${cmd_extras} --append"
+fi
+
+if [ ! -z "${CLEANUP}"  ] && [ "${CLEANUP}" = "true" ]; then
+    cmd_extras="${cmd_extras} --cleanup"
 fi
 
 python -m video_prepare prepare-videos-for-environment-for-time-range \
@@ -16,4 +20,4 @@ python -m video_prepare prepare-videos-for-environment-for-time-range \
     --video_name ${VIDEO_NAME} \
     --start ${START_TIME} \
     --end ${END_TIME} \
-    ${rewrite_append}
+    ${cmd_extras}

@@ -2,21 +2,15 @@ import datetime
 import os
 from typing import List, Optional
 
-from . import const, util
+from . import const
 from .honeycomb_service import HoneycombClient
 from .introspection import fetch_video_metadata_in_range
 from .log import logger
 from .stream_service import client as stream_service_client, models
 from .transcode import (
-    concat_videos,
-    count_frames,
-    generate_preview_image,
-    pad_video,
-    prepare_hls,
-    trim_video,
     copy_technical_difficulties_clip,
 )
-from .manifest import Manifest
+from .streaming_generator import StreamingGenerator
 
 
 def prepare_videos_for_environment_for_time_range(
@@ -29,6 +23,7 @@ def prepare_videos_for_environment_for_time_range(
     append: bool = False,
     camera: Optional[List[str]] = None,
     raw_video_storage_directory: Optional[str] = None,
+    remove_video_files_after_processing: bool = False,
 ):
     if camera is None:
         camera = []
@@ -70,12 +65,6 @@ def prepare_videos_for_environment_for_time_range(
     empty_clip_path = const.empty_clip_path(output_dir)
     copy_technical_difficulties_clip(clip_path=empty_clip_path, output_path=empty_clip_path, rewrite=rewrite)
 
-    index_manifest = {}
-
-    # track video json to write to environment's index.json
-    all_video_meta: List[models.VideoResponse] = index_manifest.get("videos", [])
-
-    # evaluate the assignments to filter out non-camera assignments
     assignments = honeycomb_client.get_assignments(environment_id)
     for _, (assignment_id, device_id, assigned_name) in enumerate(assignments):
         if len(camera) > 0:
@@ -86,7 +75,6 @@ def prepare_videos_for_environment_for_time_range(
         camera_specific_directory = os.path.join(output_dir, assigned_name)
         os.makedirs(camera_specific_directory, exist_ok=True)
 
-        rewrite_current = rewrite
         logger.info(f"Fetching video metadata for camera '{device_id}:{assigned_name}' - {start} (start) - {end} (end)")
         video_metadata = list(
             fetch_video_metadata_in_range(environment_id=environment_id, device_id=device_id, start=start, end=end)
@@ -96,144 +84,27 @@ def prepare_videos_for_environment_for_time_range(
         if len(video_metadata) == 0:
             logger.warning(f"No videos for assignment: '{assignment_id}':{assigned_name}")
 
-        # fetch all of the videos for each camera, records are returned ordered by timestamp
-        # missing clips are stored behind the "missing" attribute
-        manifest = Manifest(
+        streaming_generator = StreamingGenerator(
             video_metadata=video_metadata,
             start=start,
             end=end,
             output_directory=camera_specific_directory,
             empty_clip_path=empty_clip_path,
             raw_video_storage_directory=raw_video_storage_directory,
-        )
+        ).load()
 
-        if len(manifest.get_files()) == 0:
+        if streaming_generator.file_count() == 0:
+            logger.info(f"No videos found for {device_id}:{assigned_name}, no streamable video to be generated")
             continue
 
-        manifest.execute()
+        try:
+            streaming_generator.execute(rewrite=rewrite)
+        except Exception as e:
+            logger.error(f"Exception generating streamable video for {device_id}:{assigned_name}")
+            logger.error(e)
+            continue
 
-        hls_out = os.path.join(camera_specific_directory, "output.m3u8")
-        hls_thumb_out = os.path.join(camera_specific_directory, "output-small.m3u8")
-        preview_image_out = os.path.join(camera_specific_directory, "output-preview.jpg")
-        preview_image_thumb_out = os.path.join(camera_specific_directory, "output-preview-small.jpg")
-        # camera_video_history_path = os.path.join(camera_specific_directory, "history.json")
-
-        # last_end_time = start
-        # camera_video_history = []
-        # if index_manifest is None or index_manifest == {} or not os.path.isfile(camera_video_history_path):
-        #     rewrite_current = True
-        # else:
-        #     with open(camera_video_history_path, "r") as fp:
-        #         try:
-        #             camera_video_history = json.load(fp)
-        #         except ValueError as e:
-        #             logger.error("Failed loading {} - {}".format(camera_video_history_path, e))
-        #             rewrite_current = True
-        #
-        #     is_valid_history = camera_video_history is not None and isinstance(camera_video_history, list)
-        #     is_valid_and_has_history = is_valid_history and len(camera_video_history) > 0
-        #
-        #     if not is_valid_history:
-        #         camera_video_history = []
-        #         rewrite_current = True
-        #
-        #     elif is_valid_and_has_history:
-        #         camera_start_time = camera_video_history[0]["start_time"]
-        #         camera_end_time = camera_video_history[-1]["end_time"]
-        #         if util.str_to_date(index_manifest["start"]) != util.str_to_date(camera_start_time):
-        #             logger.error(
-        #                 "Unexpected start_time for camera '{}': {} != {}. Recreating HLS stream...".format(
-        #                     assigned_name, camera_start_time, index_manifest["start"]
-        #                 )
-        #             )
-        #             camera_video_history = []
-        #             rewrite_current = True
-        #         else:
-        #             expected_duration = (
-        #                     util.str_to_date(camera_end_time) - util.str_to_date(camera_start_time)
-        #             ).total_seconds()
-        #             actual_duration = get_duration(hls_out)
-        #             if actual_duration != expected_duration:
-        #                 logger.error(
-        #                     "Unexpected duration for camera '{}': {} != {}. Recreating HLS stream...".format(
-        #                         assigned_name, expected_duration, actual_duration
-        #                     )
-        #                 )
-        #                 camera_video_history = []
-        #                 rewrite_current = True
-        #
-        #         for record in camera_video_history:
-        #             if last_end_time is None:
-        #                 last_end_time = util.date_to_video_history_format(record["end_time"])
-        #             else:
-        #                 if util.str_to_date(record["end_time"]) > util.str_to_date(last_end_time):
-        #                     last_end_time = util.date_to_video_history_format(record["end_time"])
-
-        current_input_files_path = os.path.join(camera_specific_directory, "m3u8_files.txt")
-        video_out_path = os.path.join(camera_specific_directory, "output.mp4")
-        thumb_out_path = os.path.join(camera_specific_directory, "output-small.mp4")
-
-        current_video_history = {
-            "start_time": start,
-            "end_time": None,
-            "files": [],
-            "video_out_path": video_out_path,
-            "thumb_out_path": thumb_out_path,
-        }
-
-        # already_processed_files = list(map(lambda x: x["files"], camera_video_history))
-        # already_processed_files = list(itertools.chain(*already_processed_files))
-
-        with open(current_input_files_path, "w", encoding="utf-8") as fp:
-            count = 0
-            for file in sorted(manifest.get_files(), key=lambda x: x["video_streamer_path"]):
-                video_snippet_path = file["video_streamer_path"]
-                # Skip video files that have already been processed
-                # if video_snippet_path in already_processed_files and not rewrite:
-                #     continue
-
-                # Process new video files
-                logger.info(f"Preparing '{video_snippet_path}' for HLS generation...")
-                try:
-                    num_frames = count_frames(video_snippet_path)
-                except Exception:
-                    logger.warning(f"Unable to probe '{video_snippet_path}', replacing with empty video clip")
-                    video_snippet_path = empty_clip_path
-                    count_frames(video_snippet_path)
-
-                if num_frames < 100:
-                    pad_video(video_snippet_path, video_snippet_path, frames=(100 - num_frames))
-                if num_frames > 100:
-                    trim_video(video_snippet_path, video_snippet_path)
-
-                fp.write(
-                    f"file 'file:{video_snippet_path}' duration 00:00:{util.format_frames(num_frames)} inpoint {util.vts(count)} outpoint {util.vts(count + num_frames)}\n"
-                )
-
-                current_video_history["files"].append(video_snippet_path)
-                if current_video_history["end_time"] is None or file["end"] > util.str_to_date(
-                    current_video_history["end_time"]
-                ):
-                    current_video_history["end_time"] = util.date_to_video_history_format(file["end"])
-
-                count += num_frames
-            fp.flush()
-
-        if len(current_video_history["files"]) > 0:
-            concat_videos(
-                input_path=current_input_files_path, output_path=video_out_path, thumb_path=thumb_out_path, rewrite=True
-            )
-            logger.info(f"Generated: {video_out_path}")
-
-        if len(current_video_history["files"]) > 0:
-            # prepare videos for HLS streaming
-            prepare_hls(video_out_path, hls_out, rewrite=rewrite_current, append=append)
-            prepare_hls(thumb_out_path, hls_thumb_out, rewrite=rewrite_current, append=append)
-
-            # camera_video_history.append(current_video_history)
-
-            generate_preview_image(video_out_path, preview_image_out)
-            generate_preview_image(thumb_out_path, preview_image_thumb_out)
+        streaming_generator.cleanup(remove_processed_files=remove_video_files_after_processing)
 
         current_video = models.Video(
             playset_id=playset.id,
@@ -241,34 +112,6 @@ def prepare_videos_for_environment_for_time_range(
             device_name=assigned_name,
             url=f"/videos/{environment_id}/{video_name}/{assigned_name}/output.m3u8",
             preview_url=f"/videos/{environment_id}/{video_name}/{assigned_name}/output-preview.jpg",
-            preview_thumbnail_url=f"/videos/{environment_id}/{video_name}/{assigned_name}/output-preview-small.jpg",
+            preview_thumbnail_url=f"/videos/{environment_id}/{video_name}/{assigned_name}/output-preview.jpg",
         )
-
-        ######
-        # Update or append to the video_meta data object
-        ######
-        updated_existing_video_meta_record = False
-        for idx_jj, video_record in enumerate(all_video_meta):
-            if video_record.device_id == device_id:
-                updated_existing_video_meta_record = True
-                all_video_meta[idx_jj] = current_video
-                break
-
-        if not updated_existing_video_meta_record:
-            all_video_meta.append(current_video)
-        ######
-
-        # with open(camera_video_history_path, "w") as fp:
-        #     json.dump(camera_video_history, fp, cls=util.DateTimeEncoder)
-        #     fp.flush()
-
-        # Add a record in the classroom's index that points to this run's video
-        # feeds
         streaming_client.add_video_to_playset(video=current_video)
-        # add_date_to_classroom(
-        #     root_path=output_path,
-        #     classroom_id=environment_id,
-        #     date=start.strftime("%Y-%m-%d"),
-        #     name=output_name,
-        #     time_range=[start.strftime("%H:%M:%S%z"), end.strftime("%H:%M:%S%z")],
-        # )

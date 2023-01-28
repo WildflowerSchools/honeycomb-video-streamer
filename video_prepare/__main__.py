@@ -136,6 +136,12 @@ def list_videos_for_environment_for_time_range(environment_name, output_path, ou
     default=False,
 )
 @click.option(
+    "--cleanup",
+    help="Will remove downloaded/copied videos after generating streamable video. Use to cut down on storage costs. Note, videos will need to be fully reprocessed if streamable video needs to be regenerated",
+    is_flag=True,
+    default=False,
+)
+@click.option(
     "--camera",
     "-c",
     help="list of cameras to generate video for (ids/names)",
@@ -144,7 +150,16 @@ def list_videos_for_environment_for_time_range(environment_name, output_path, ou
     default=[],
 )
 def prepare_videos_for_environment_for_time_range(
-    environment_name, video_directory, raw_video_storage_directory, video_name, start, end, rewrite, append, camera
+    environment_name,
+    video_directory,
+    raw_video_storage_directory,
+    video_name,
+    start,
+    end,
+    rewrite,
+    append,
+    cleanup,
+    camera,
 ):
     core.prepare_videos_for_environment_for_time_range(
         environment_name=environment_name,
@@ -156,6 +171,7 @@ def prepare_videos_for_environment_for_time_range(
         append=append,
         camera=camera,
         raw_video_storage_directory=raw_video_storage_directory,
+        remove_video_files_after_processing=cleanup,
     )
 
 

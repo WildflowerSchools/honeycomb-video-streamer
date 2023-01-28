@@ -1,6 +1,14 @@
 from datetime import datetime
 import json
 import os
+
+import collections
+
+try:
+    collectionsAbc = collections.abc
+except AttributeError:
+    collectionsAbc = collections
+
 import pytz
 
 
@@ -60,3 +68,21 @@ def vts(frames):
 
 def clean_pd_ts(ts):
     return ts.to_pydatetime().astimezone(pytz.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+# Thanks: https://github.com/kkroening/ffmpeg-python/issues/450
+def convert_kwargs_to_cmd_line_args(kwargs):
+    """Helper function to build command line arguments out of dict."""
+    args = []
+    for k in sorted(kwargs.keys()):
+        v = kwargs[k]
+        if isinstance(v, collectionsAbc.Iterable) and not isinstance(v, str):
+            for value in v:
+                args.append("-{}".format(k))
+                if value is not None:
+                    args.append("{}".format(value))
+            continue
+        args.append("-{}".format(k))
+        if v is not None:
+            args.append("{}".format(v))
+    return args
