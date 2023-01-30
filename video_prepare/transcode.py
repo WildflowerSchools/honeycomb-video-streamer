@@ -106,6 +106,14 @@ def trim_video(input_path, output_path, duration=10):
         logger.error(f"Failed trimming video {input_path}")
         logger.error(e)
         return False
+    except IOError as e:
+        logger.error(f"Failed trimming video, could not copy {input_path} to {tmp_path}")
+        logger.error(e)
+        return False
+    except Exception as e:
+        logger.error(f"Failed trimming video, unknown exception working with {input_path}")
+        logger.error(e)
+        return False
     finally:
         if use_tmp:
             os.remove(tmp_path)
@@ -294,6 +302,14 @@ def pad_video(input_path, output_path, frames):
         ).overwrite_output().run()
     except ffmpeg._run.Error as e:
         logger.error(f"Failed padding {input_path} with {frames} additional frames")
+        logger.error(e)
+        return False
+    except IOError as e:
+        logger.error(f"Failed padding video, could not copy {input_path} to {tmp_path}")
+        logger.error(e)
+        return False
+    except Exception as e:
+        logger.error(f"Failed padding video, unknown exception working with {input_path}")
         logger.error(e)
         return False
     finally:
