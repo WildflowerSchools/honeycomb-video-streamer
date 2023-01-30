@@ -195,11 +195,11 @@ class StreamingGenerator:
             if not os.path.exists(v["video_streamer_path"]):
                 video_not_on_disk.append(v)
 
-        def copy_from_raw_video_storage(video):
+        def _copy_from_raw_video_storage(video):
             copy_success = False
             if self.raw_video_storage_directory:
                 raw_video_path = os.path.join(self.raw_video_storage_directory, video["path"])
-                print(raw_video_path)
+
                 if os.path.exists(raw_video_path):
                     try:
                         shutil.copy(raw_video_path, video["video_streamer_path"])
@@ -215,7 +215,7 @@ class StreamingGenerator:
 
         # 2. Try to copy videos from the raw_video_directory (if that's available)
         with ThreadPoolExecutor(max_workers=20) as executor:
-            results = executor.map(copy_from_raw_video_storage, video_not_on_disk)
+            results = executor.map(_copy_from_raw_video_storage, video_not_on_disk)
             executor.shutdown(wait=True)
 
         for (v, success) in results:
@@ -242,24 +242,53 @@ class StreamingGenerator:
 
     def process_raw_files(self):
         logger.info("Processing raw video files, verifying FPS and file length")
+
+        def _process(file_tuple):
+            idx, file = file_tuple
+            video_snippet_path = file["video_streamer_path"]
+
+            # Process new video files
+            logger.info(f"Preparing '{video_snippet_path}' for HLS generation...")
+            try:
+                num_frames = count_frames(video_snippet_path)
+            except Exception:
+                logger.warning(f"Unable to probe '{video_snippet_path}', replacing with empty video clip")
+                video_snippet_path = self.empty_clip_path
+                count_frames(video_snippet_path)
+
+            if num_frames < 100:
+                pad_video(video_snippet_path, video_snippet_path, frames=(100 - num_frames))
+            if num_frames > 100:
+                trim_video(video_snippet_path, video_snippet_path, duration=10)
+
+            num_frames = 100
+
+            return num_frames, file
+
+        with ThreadPoolExecutor(max_workers=20) as executor:
+            results = executor.map(_process, self.get_files().iterrows())
+            executor.shutdown(wait=True)
+
         with open(self.m3u8_files_path, "w", encoding="utf-8") as fp:
             count = 0
-            for idx, file in self.get_files().iterrows():
+            for num_frames, file in results:
                 video_snippet_path = file["video_streamer_path"]
-
-                # Process new video files
-                logger.info(f"Preparing '{video_snippet_path}' for HLS generation...")
-                try:
-                    num_frames = count_frames(video_snippet_path)
-                except Exception:
-                    logger.warning(f"Unable to probe '{video_snippet_path}', replacing with empty video clip")
-                    video_snippet_path = self.empty_clip_path
-                    count_frames(video_snippet_path)
-
-                if num_frames < 100:
-                    pad_video(video_snippet_path, video_snippet_path, frames=(100 - num_frames))
-                if num_frames > 100:
-                    trim_video(video_snippet_path, video_snippet_path)
+                #
+                # # Process new video files
+                # logger.info(f"Preparing '{video_snippet_path}' for HLS generation...")
+                # try:
+                #     num_frames = count_frames(video_snippet_path)
+                # except Exception:
+                #     logger.warning(f"Unable to probe '{video_snippet_path}', replacing with empty video clip")
+                #     video_snippet_path = self.empty_clip_path
+                #     count_frames(video_snippet_path)
+                #
+                # if num_frames < 100:
+                #     pad_video(video_snippet_path, video_snippet_path, frames=(100 - num_frames))
+                # if num_frames > 100:
+                #     trim_video(video_snippet_path, video_snippet_path, duration=10)
+                #
+                # num_frames = 100
 
                 fp.write(
                     f"file 'file:{video_snippet_path}' duration 00:00:{util.format_frames(num_frames)} inpoint {util.vts(count)} outpoint {util.vts(count + num_frames)}\n"

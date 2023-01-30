@@ -38,6 +38,7 @@ pydantic = "^1.10.4"
 wf-honeycomb-io = "^2.0.0"
 pyyaml = "^6.0"
 sqlalchemy-utc = "^0.14.0"
+asyncache = "^0.3.1"
 
 [tool.poetry.group.dev.dependencies]
 black = "^22.12.0"

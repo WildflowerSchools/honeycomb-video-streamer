@@ -3,12 +3,13 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from cachetools.func import ttl_cache
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 
 from wf_fastapi_auth0 import verify_token, get_subject_domain
-from wf_fastapi_auth0.wf_permissions import AuthRequest, check_requests
+from wf_fastapi_auth0.wf_permissions import AuthRequest
+
+from .cacheable_check_requests import cached_check_requests, CacheableAuthRequest
 from .models import (
     ClassroomListResponse,
     ClassroomResponse,
@@ -30,26 +31,44 @@ honeycomb_client = HoneycombClient()
 STATIC_PATH = os.environ.get("STATIC_PATH", "./public/videos")
 
 
-@ttl_cache(30)
+# @ttl_cache(30)
 async def can_read(perm_subject_domain: tuple = Depends(get_subject_domain)) -> bool:
-    resp = await check_requests(
-        [AuthRequest(sub=perm_subject_domain[0], dom=perm_subject_domain[1], obj="classroom:videos", act="read")]
+    resp = await cached_check_requests(
+        tuple(
+            [
+                CacheableAuthRequest(
+                    sub=perm_subject_domain[0], dom=perm_subject_domain[1], obj="classroom:videos", act="read"
+                )
+            ]
+        )
     )
     return resp[0]["allow"]
 
 
-@ttl_cache(30)
+# @ttl_cache(30)
 async def can_write(perm_subject_domain: tuple = Depends(get_subject_domain)) -> bool:
-    resp = await check_requests(
-        [AuthRequest(sub=perm_subject_domain[0], dom=perm_subject_domain[1], obj="classroom:videos", act="write")]
+    resp = await cached_check_requests(
+        tuple(
+            [
+                CacheableAuthRequest(
+                    sub=perm_subject_domain[0], dom=perm_subject_domain[1], obj="classroom:videos", act="write"
+                )
+            ]
+        )
     )
     return resp[0]["allow"]
 
 
-@ttl_cache(30)
+# @ttl_cache(30)
 async def can_delete(perm_subject_domain: tuple = Depends(get_subject_domain)) -> bool:
-    resp = await check_requests(
-        [AuthRequest(sub=perm_subject_domain[0], dom=perm_subject_domain[1], obj="classroom:videos", act="delete")]
+    resp = await cached_check_requests(
+        tuple(
+            [
+                CacheableAuthRequest(
+                    sub=perm_subject_domain[0], dom=perm_subject_domain[1], obj="classroom:videos", act="delete"
+                )
+            ]
+        )
     )
     return resp[0]["allow"]
 
@@ -219,8 +238,14 @@ async def create_video(
 async def videos_root(
     classroom_id: str, playest_name: str, filename: str, perm_subject_domain: tuple = Depends(get_subject_domain)
 ) -> FileResponse:
-    resp = await check_requests(
-        [AuthRequest(sub=perm_subject_domain[0], dom=perm_subject_domain[1], obj=f"{classroom_id}:videos", act="read")]
+    resp = await cached_check_requests(
+        tuple(
+            [
+                CacheableAuthRequest(
+                    sub=perm_subject_domain[0], dom=perm_subject_domain[1], obj=f"{classroom_id}:videos", act="read"
+                )
+            ]
+        )
     )
     if not resp[0]["allow"]:
         raise HTTPException(status_code=401, detail="not_allowed")
@@ -240,8 +265,14 @@ async def videos(
     filename: str,
     perm_subject_domain: tuple = Depends(get_subject_domain),
 ) -> FileResponse:
-    resp = await check_requests(
-        [AuthRequest(sub=perm_subject_domain[0], dom=perm_subject_domain[1], obj=f"{classroom_id}:videos", act="read")]
+    resp = await cached_check_requests(
+        tuple(
+            [
+                CacheableAuthRequest(
+                    sub=perm_subject_domain[0], dom=perm_subject_domain[1], obj=f"{classroom_id}:videos", act="read"
+                )
+            ]
+        )
     )
     if not resp[0]["allow"]:
         raise HTTPException(status_code=401, detail="not_allowed")

@@ -4,8 +4,8 @@ from typing import Optional
 from cachetools.func import ttl_cache
 from sqlalchemy import create_engine, select, insert, delete, or_
 from sqlalchemy.orm import sessionmaker
-from wf_fastapi_auth0.wf_permissions import check_requests, AuthRequest
 
+from .cacheable_check_requests import CacheableAuthRequest, cached_check_requests
 from . import schema
 from .models import (
     ClassroomListResponse,
@@ -75,39 +75,48 @@ class Handle:
         self.permission_subject = perm_subject
         self.permission_domain = perm_domain
 
-    # def __del__(self):
-    #     self.connection.close()
-
     async def has_read_permission(self, environment_id) -> bool:
-        resp = await check_requests(
-            [
-                AuthRequest(
-                    sub=self.permission_subject, dom=self.permission_domain, obj=f"{environment_id}:videos", act="read"
-                )
-            ]
+        resp = await cached_check_requests(
+            tuple(
+                [
+                    CacheableAuthRequest(
+                        sub=self.permission_subject,
+                        dom=self.permission_domain,
+                        obj=f"{environment_id}:videos",
+                        act="read",
+                    )
+                ]
+            )
         )
         return resp[0]["allow"]
 
     async def has_write_permission(self, environment_id) -> bool:
-        resp = await check_requests(
-            [
-                AuthRequest(
-                    sub=self.permission_subject, dom=self.permission_domain, obj=f"{environment_id}:videos", act="write"
-                )
-            ]
+        resp = await cached_check_requests(
+            tuple(
+                [
+                    CacheableAuthRequest(
+                        sub=self.permission_subject,
+                        dom=self.permission_domain,
+                        obj=f"{environment_id}:videos",
+                        act="write",
+                    )
+                ]
+            )
         )
         return resp[0]["allow"]
 
     async def has_delete_permission(self, environment_id) -> bool:
-        resp = await check_requests(
-            [
-                AuthRequest(
-                    sub=self.permission_subject,
-                    dom=self.permission_domain,
-                    obj=f"{environment_id}:videos",
-                    act="delete",
-                )
-            ]
+        resp = await cached_check_requests(
+            tuple(
+                [
+                    CacheableAuthRequest(
+                        sub=self.permission_subject,
+                        dom=self.permission_domain,
+                        obj=f"{environment_id}:videos",
+                        act="delete",
+                    )
+                ]
+            )
         )
         return resp[0]["allow"]
 

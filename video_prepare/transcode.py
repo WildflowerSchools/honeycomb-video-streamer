@@ -146,7 +146,7 @@ def concat_videos(input_path, output_path, rewrite=False):
         raise Exception("Failed concatenating mp4 file")
 
 
-def prepare_hls(input_path, output_path, hls_time=10, rewrite=False, append=True):
+def prepare_hls(input_path, output_path, hls_time=10, rewrite=False, append=True, include_low_res_stream=False):
     hls_exists = os.path.exists(output_path)
     hls_directory = os.path.dirname(output_path)
 
@@ -165,23 +165,34 @@ def prepare_hls(input_path, output_path, hls_time=10, rewrite=False, append=True
         segment_filenames = os.path.join(hls_directory, f"%v_{segment_format}")
         m3u8_steams_output = os.path.join(hls_directory, "output_stream_%v.m3u8")
 
+        hls_filter_complex = None
+        hls_map = ["0:v"]
+        hls_var_stream_map = "v:0"
+
+        if include_low_res_stream:
+            hls_filter_complex = "[0:v]split=2[v1out][v2];[v2]scale=iw*.5:ih*.5[v2out]"
+            hls_map = ["[v1out]", "[v2out]"]
+            hls_var_stream_map = "v:0 v:1"
+
         hls_options = dict(
             preset="veryfast",
-            crf=25,
-            filter_complex="[0:v]split=2[v1][v2out];[v1]scale=iw*.5:ih*.5[v1out]",
-            map=["[v1out]", "[v2out]"],
+            crf=28,
+            filter_complex=hls_filter_complex,
+            map=hls_map,
             f="hls",
             hls_time=hls_time,
             hls_list_size=0,
             hls_playlist_type="event",  # Allow appending to video
             hls_segment_filename=segment_filenames,
-            var_stream_map="v:0 v:1",
+            var_stream_map=hls_var_stream_map,
             master_pl_name="output.m3u8",
         )
         hls_options["c:v:0"] = "libx264"
         hls_options["b:v:0"] = "2400k"
-        hls_options["c:v:1"] = "libx264"
-        hls_options["b:v:1"] = "600k"
+
+        if include_low_res_stream:
+            hls_options["c:v:1"] = "libx264"
+            hls_options["b:v:1"] = "600k"
 
         hls_args = convert_kwargs_to_cmd_line_args(hls_options)
         hls_args = ["ffmpeg", "-i", input_path] + hls_args
