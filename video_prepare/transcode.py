@@ -194,6 +194,9 @@ def prepare_hls(input_path, output_path, hls_time=10, rewrite=False, append=True
             hls_options["c:v:1"] = "libx264"
             hls_options["b:v:1"] = "600k"
 
+        # Remove None items from dict
+        hls_options = {k: v for k, v in hls_options.items() if v is not None}
+
         hls_args = convert_kwargs_to_cmd_line_args(hls_options)
         hls_args = ["ffmpeg", "-i", input_path] + hls_args
         hls_args.append(m3u8_steams_output)
