@@ -254,7 +254,7 @@ class StreamingGenerator:
             except Exception:
                 logger.warning(f"Unable to probe '{video_snippet_path}', replacing with empty video clip")
                 video_snippet_path = self.empty_clip_path
-                count_frames(video_snippet_path)
+                num_frames = count_frames(video_snippet_path)
 
             if num_frames < 100:
                 pad_video(video_snippet_path, video_snippet_path, frames=(100 - num_frames))
@@ -273,22 +273,6 @@ class StreamingGenerator:
             count = 0
             for num_frames, file in results:
                 video_snippet_path = file["video_streamer_path"]
-                #
-                # # Process new video files
-                # logger.info(f"Preparing '{video_snippet_path}' for HLS generation...")
-                # try:
-                #     num_frames = count_frames(video_snippet_path)
-                # except Exception:
-                #     logger.warning(f"Unable to probe '{video_snippet_path}', replacing with empty video clip")
-                #     video_snippet_path = self.empty_clip_path
-                #     count_frames(video_snippet_path)
-                #
-                # if num_frames < 100:
-                #     pad_video(video_snippet_path, video_snippet_path, frames=(100 - num_frames))
-                # if num_frames > 100:
-                #     trim_video(video_snippet_path, video_snippet_path, duration=10)
-                #
-                # num_frames = 100
 
                 fp.write(
                     f"file 'file:{video_snippet_path}' duration 00:00:{util.format_frames(num_frames)} inpoint {util.vts(count)} outpoint {util.vts(count + num_frames)}\n"
