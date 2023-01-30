@@ -253,19 +253,26 @@ class StreamingGenerator:
                 num_frames = count_frames(video_snippet_path)
             except Exception:
                 logger.warning(f"Unable to probe '{video_snippet_path}', replacing with empty video clip")
+                file["video_streamer_path"] = self.empty_clip_path
                 video_snippet_path = self.empty_clip_path
                 num_frames = count_frames(video_snippet_path)
 
+            success = True
             if num_frames < 100:
-                pad_video(video_snippet_path, video_snippet_path, frames=(100 - num_frames))
+                success = pad_video(video_snippet_path, video_snippet_path, frames=(100 - num_frames))
             if num_frames > 100:
-                trim_video(video_snippet_path, video_snippet_path, duration=10)
+                success = trim_video(video_snippet_path, video_snippet_path, duration=10)
 
-            num_frames = 100
+            if not success:
+                logger.warning(f"Unable to pad/trim '{video_snippet_path}', replacing with empty video clip")
+                file["video_streamer_path"] = self.empty_clip_path
+                video_snippet_path = self.empty_clip_path
+
+            num_frames = count_frames(video_snippet_path)
 
             return num_frames, file
 
-        with ThreadPoolExecutor(max_workers=20) as executor:
+        with ThreadPoolExecutor(max_workers=10) as executor:
             results = executor.map(_process, self.get_files().iterrows())
             executor.shutdown(wait=True)
 
