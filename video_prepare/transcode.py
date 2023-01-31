@@ -99,8 +99,8 @@ def trim_video(input_path, output_path, duration=10):
             shutil.copy(input_path, tmp_path)
             ffmpeg_input_path = tmp_path
 
-        ffmpeg.input(ffmpeg_input_path, ss=0, to=duration).output(
-            output_path, r=10, vframes=100
+        ffmpeg.input(ffmpeg_input_path, ss=0, to=duration).output(output_path, r=10, vframes=100).global_args(
+            "-loglevel", "warning"
         ).overwrite_output().run()
     except ffmpeg._run.Error as e:
         logger.error(f"Failed trimming video {input_path}")
@@ -138,7 +138,9 @@ def concat_videos(input_path, output_path, rewrite=False):
 
             if not concat_mp4_exists:
                 files = ffmpeg.input(f"file:{input_path}", format="concat", safe=0, r=10)
-                files.output(f"file:{output_path}", c="copy", r=10, vsync=0).run()
+                files.output(f"file:{output_path}", c="copy", r=10, fps_mode=0).global_args(
+                    "-loglevel", "warning"
+                ).run()
             else:
                 logger.info(f"concatenated video '{output_path}' already exists")
 
@@ -183,6 +185,7 @@ def prepare_hls(input_path, output_path, hls_time=10, rewrite=False, append=True
             hls_var_stream_map = "v:0 v:1"
 
         hls_options = dict(
+            loglevel="warning",
             preset="veryfast",
             crf=28,
             filter_complex=hls_filter_complex,
@@ -238,7 +241,9 @@ def generate_preview_image(input_path, output_path, rewrite=False):
             logger.error(e)
 
         if ss > 0:
-            ffmpeg.input(input_path, ss=ss).output(output_path, format="image2", vframes=1).run()
+            ffmpeg.input(input_path, ss=ss).output(
+                output_path, format="image2", update=1, vframes=1, pix_fmt="yuvj422p"
+            ).global_args("-loglevel", "warning").run()
         else:
             logger.warning(f"Could not generate preview image for '{input_path}', file appears empty or corrupted")
     else:
@@ -258,7 +263,9 @@ def create_technical_difficulties_clip(clip_path):
         clip = ffmpeg.input(input_path, loop=1, to=duration)
         # Added vframes to for 100 frames and prevent ffmpeg from adding an
         # additional 2 rogue frames
-        clip.output(clip_path, r=fps, format="mp4", pix_fmt="bgr24", vframes=100).run()
+        clip.output(clip_path, r=fps, format="mp4", pix_fmt="yuvj422p", vframes=100).global_args(
+            "-loglevel", "warning"
+        ).run()
 
 
 def copy_technical_difficulties_clip(clip_path, output_path, rewrite=False):
@@ -299,7 +306,7 @@ def pad_video(input_path, output_path, frames):
         stop_duration = frames / 10
         ffmpeg.input(ffmpeg_input_path).output(
             output_path, filter_complex=f"tpad=stop_duration={stop_duration}:stop_mode=clone"
-        ).overwrite_output().run()
+        ).global_args("-loglevel", "warning").overwrite_output().run()
     except ffmpeg._run.Error as e:
         logger.error(f"Failed padding {input_path} with {frames} additional frames")
         logger.error(e)
