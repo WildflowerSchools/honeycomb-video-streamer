@@ -6,10 +6,11 @@ RUN apt update -y && \
 
 WORKDIR /app
 
-COPY pyproject.toml setup.py /app/
+COPY poetry.lock pyproject.toml setup.py /app/
 
-RUN poetry lock && \
-    poetry export -f requirements.txt --without dev | pip install -r /dev/stdin
+#RUN poetry lock && \
+#    poetry export -f requirements.txt --without dev | pip install -r /dev/stdin
+RUN poetry config virtualenvs.create false && poetry install --without dev --no-interaction --no-ansi  --no-root
 
 COPY video_streaming_service/ /app/video_streaming_service/
 
