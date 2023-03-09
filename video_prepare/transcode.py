@@ -71,8 +71,6 @@ def probe_file(mp4_video_path):
 
 
 def count_frames(mp4_video_path):
-    # ffprobe -v error -select_streams v:0 -show_entries stream=nb_frames -of
-    # default=nokey=1:noprint_wrappers=1
     probe = probe_file(mp4_video_path)
     if probe is None or "streams" not in probe:
         err = f"ffmpeg returned unexpected response reading {mp4_video_path}"
