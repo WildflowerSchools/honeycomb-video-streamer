@@ -1,6 +1,6 @@
 FROM python:3.10.9-slim as build
 
-ARG FFMPEG_VERSION=5.1.2
+ARG FFMPEG_VERSION=6.0
 
 ARG FFMPEG_PREFIX=/opt/ffmpeg
 ARG MAKEFLAGS="-j8"
