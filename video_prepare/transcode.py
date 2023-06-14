@@ -197,7 +197,7 @@ def prepare_hls(input_path, output_path, hls_time=10, rewrite=False, append=True
             master_pl_name="output.m3u8",
         )
         hls_options["c:v:0"] = "libx264"
-        hls_options["b:v:0"] = "2400k"
+        # hls_options["b:v:0"] = "2400k"
 
         if include_low_res_stream:
             hls_options["c:v:1"] = "libx264"

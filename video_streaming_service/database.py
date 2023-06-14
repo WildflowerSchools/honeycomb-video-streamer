@@ -66,7 +66,7 @@ class PermissionException(Exception):
 
 
 class Handle:
-    # For unrestricted acccess, use:
+    # For unrestricted access, use:
     #    perm_subject="wildflower-robots@wildflower-tech.org"
     #    perm_domain="wildflowerschools.org"
     def __init__(self, db_session, perm_subject, perm_domain):
