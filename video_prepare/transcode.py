@@ -81,6 +81,16 @@ def count_frames(mp4_video_path):
     return int(video_stream["nb_frames"])
 
 
+def bitrate(mp4_video_path):
+    probe = probe_file(mp4_video_path)
+    if probe is None or "streams" not in probe:
+        err = f"ffmpeg returned unexpected response reading {mp4_video_path}"
+        logger.error(err)
+        raise ValueError(err)
+    video_stream = next((stream for stream in probe["streams"] if stream["codec_type"] == "video"), None)
+    return int(video_stream["bit_rate"])
+
+
 def get_duration(hls_video_path):
     probe = ffmpeg.probe(hls_video_path)
     return float(probe["format"]["duration"])
@@ -185,7 +195,7 @@ def prepare_hls(input_path, output_path, hls_time=10, rewrite=False, append=True
         hls_options = dict(
             loglevel="warning",
             preset="veryfast",
-            crf=28,
+            crf=29,
             filter_complex=hls_filter_complex,
             map=hls_map,
             f="hls",
@@ -194,10 +204,11 @@ def prepare_hls(input_path, output_path, hls_time=10, rewrite=False, append=True
             hls_playlist_type="event",  # Allow appending to video
             hls_segment_filename=segment_filenames,
             var_stream_map=hls_var_stream_map,
+            r=10,
             master_pl_name="output.m3u8",
         )
         hls_options["c:v:0"] = "libx264"
-        hls_options["b:v:0"] = "copy"
+        hls_options["b:v:0"] = f"{bitrate(input_path)}"
 
         if include_low_res_stream:
             hls_options["c:v:1"] = "libx264"
