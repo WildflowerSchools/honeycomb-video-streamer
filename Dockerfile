@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 python:3.10.9-slim
+FROM --platform=linux/amd64 python:slim-bookworm
 
 RUN apt update -y && \
     apt install build-essential libpq-dev -y && \
