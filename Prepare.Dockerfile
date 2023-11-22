@@ -1,4 +1,4 @@
-FROM python:3.10.9-slim as build
+FROM python:slim-bookworm as build
 
 ARG FFMPEG_VERSION=6.0
 
@@ -92,7 +92,7 @@ RUN wget http://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.gz && \
       make ${MAKEFLAGS} && make install && make distclean
 
 
-FROM python:3.10.9-slim
+FROM python:slim-bookworm
 
 RUN apt update -y && \
     apt-get install -y \
